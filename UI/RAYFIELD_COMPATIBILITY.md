@@ -1,6 +1,6 @@
 # Eclipse UI: Rayfield compatibility reference
 
-Reviewed against the official documentation on **18–19 October 2026**. The standalone build is `Current/EclipseUI.lua`, assembled from `UI/Core.lua`, `UI/Atmosphere.lua`, `UI/Controls.lua` and `UI/Advanced.lua`. The 1.3.0 modern redesign preserves the control/flag contracts below. This records the migration contract and the differences that matter when adapting other scripts. The current module source and its local validation results remain the authority for implemented behavior. This is not a claim that every service integration or every Rayfield Gen2 extension is reproduced.
+Reviewed against the official documentation on **18–19 October 2026**. The standalone build is `Current/EclipseUI.lua`, assembled from `UI/Core.lua`, `UI/Atmosphere.lua`, `UI/Controls.lua` and `UI/Advanced.lua`. The 1.3.1 minimal redesign preserves the control/flag contracts below. This records the migration contract and the differences that matter when adapting other scripts. The current module source and its local validation results remain the authority for implemented behavior. This is not a claim that every service integration or every Rayfield Gen2 extension is reproduced.
 
 ## Eclipse Premium contract
 
@@ -59,3 +59,6 @@ The owner's newer layout request takes precedence over the original responsive-s
 Compile the standalone library, the Premium outer wrapper, and the extracted embedded Premium runtime. Useful temporary checks cover setter/callback order, flags, dropdown pruning, config serialization and missing executor functions, section filtering/reflow, and repeated cleanup. Keep temporary verification outside the project and remove it afterward; do not recreate `Current/tests`.
 
 Local compilation and mocks cannot establish visual behavior in Roblox, phone touch gestures, executor image support, real viewport sizing, profile restoration during teleport, or active gameplay cleanup. Those remain live checks until observed in the owner's client. Never send a real webhook merely to validate UI work.
+
+
+Tooltips are disabled as of v1.3.1: Tooltip/Info and SetTooltip only retain metadata. Buttons and toggles create no automatic pop-ups; explicit Notify/CreateDialog APIs remain available for callers.

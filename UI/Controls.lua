@@ -78,30 +78,13 @@ return function(Library, ctx)
         local control, row, label = ctx.row(self, options, 34)
         control.Type = "Button"
         compactLabel(label, 48)
-        local badge = new("Frame", {
-            Name = "ActionBadge", AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0),
-            Size = UDim2.fromOffset(22, 22), BorderSizePixel = 0,
-        }, row)
-        bind(badge, "BackgroundColor3", function(t) return t.Base:Lerp(t.Accent, 0.12) end)
-        ctx.round(badge, 5)
-        ctx.vectorIcon(badge, "arrow", {Name = "ActionIcon", Position = UDim2.fromOffset(5, 5),
-            Size = UDim2.fromOffset(12, 12), Role = "Accent"})
-        local glow = ctx.glow(row, 8)
-        local flash = border(row)
-        local generation = 0
+        label.Size = UDim2.new(1, -20, 1, 0)
+        bind(row, "BackgroundColor3", "Accent")
+        bind(label, "TextColor3", "Primary")
+        control.Stroke.Transparency = 1
+        ctx.softGlow(row, 8)
         ctx.connect(row.Activated, function()
-            if not usable(control) then return end
-            generation += 1
-            local current = generation
-            glow:Pulse()
-            ctx.spring(badge, {Size = UDim2.fromOffset(25, 25)}, 0.18)
-            tween(flash, {Transparency = 0.28}, 0.08)
-            ctx.delay(0.3, function()
-                if control.Destroyed or not ctx.alive() or generation ~= current then return end
-                ctx.spring(badge, {Size = UDim2.fromOffset(22, 22)}, 0.2)
-                tween(flash, {Transparency = 1}, 0.22)
-            end)
-            ctx.changed(control, nil, true)
+            if usable(control) then ctx.changed(control, nil, true) end
         end)
         function control.Set(first, second)
             if control.Destroyed or not ctx.alive() then return control end
@@ -132,7 +115,6 @@ return function(Library, ctx)
         local function trackColor(t) return control.CurrentValue and t.Accent or t.Base:Lerp(t.Primary, 0.16) end
         bind(track, "BackgroundColor3", trackColor)
         ctx.round(track, 11)
-        local glow = ctx.glow(track, 11, 0.72)
         local block = new("Frame", {
             Name = "ToggleThumb", Position = UDim2.fromOffset(2, 2), Size = UDim2.fromOffset(18, 18), BorderSizePixel = 0,
         }, track)
@@ -144,7 +126,6 @@ return function(Library, ctx)
             local duration = animate and 0.18 or 0
             ctx.spring(block, {Position = UDim2.fromOffset(enabled and 20 or 2, 2)}, duration)
             tween(track, {BackgroundColor3 = trackColor(ctx.theme())}, animate and 0.16 or 0)
-            glow:SetActive(enabled, animate)
         end
         local function set(value, skipCallback)
             if control.Destroyed or not ctx.alive() then return control end
@@ -197,12 +178,11 @@ return function(Library, ctx)
             Size = UDim2.fromOffset(valueWidth, 22), BorderSizePixel = 0,
         }, row)
         local focused = false
-        local function fieldColor(t) return t.Base:Lerp(focused and t.Accent or t.Primary, focused and 0.14 or 0.08) end
+        local function fieldColor(t) return t.Base:Lerp(t.Primary, 0.08) end
         bind(field, "BackgroundColor3", fieldColor)
         ctx.round(field, 4)
         ctx.stroke(field, "Primary", 0.94)
         local focusedStroke = border(field)
-        local fieldGlow = ctx.glow(field, 4, 0.7)
         local valueBox = inputBox(field, {
             Name = "ExactValue", Position = UDim2.fromOffset(5, 0), Size = UDim2.new(1, -10, 1, 0), Text = "",
             TextXAlignment = Enum.TextXAlignment.Center,
@@ -221,16 +201,13 @@ return function(Library, ctx)
         local fill = new("Frame", {Size = UDim2.new(0, 0, 1, 0), BorderSizePixel = 0}, track)
         bind(fill, "BackgroundColor3", "Accent")
         ctx.round(fill, 2)
-        local fillGlow = ctx.glow(fill, 2, 0.7)
-        fillGlow:SetActive(true, false)
+        ctx.softGlow(fill, 2)
         local thumb = new("Frame", {
             AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0, 0.5),
             Name = "SliderThumb", Size = UDim2.fromOffset(8, 8), BorderSizePixel = 0,
         }, track)
         bind(thumb, "BackgroundColor3", "Accent")
         ctx.round(thumb, 4)
-        local thumbGlow = ctx.glow(thumb, 5, 0.8)
-        thumbGlow:SetActive(true, false)
         local dragging = false
         local function formatValue()
             local numeric = numberText(control.CurrentValue)
@@ -260,7 +237,6 @@ return function(Library, ctx)
             if not dragging then
                 dragging = true
                 ctx.spring(thumb, {Size = UDim2.fromOffset(12, 12)}, 0.18)
-                thumbGlow:Pulse()
             end
             local ratio = math.clamp((position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
             local value = snap(minimum + (maximum - minimum) * ratio)
@@ -277,14 +253,12 @@ return function(Library, ctx)
             valueBox.Text = numberText(control.CurrentValue)
             tween(field, {BackgroundColor3 = fieldColor(ctx.theme())}, 0.12)
             tween(focusedStroke, {Transparency = 0.35}, 0.12)
-            fieldGlow:SetActive(true, true)
         end)
         ctx.connect(valueBox.FocusLost, function()
             if control.Destroyed or not ctx.alive() then return end
             focused = false
             tween(field, {BackgroundColor3 = fieldColor(ctx.theme())}, 0.14)
             tween(focusedStroke, {Transparency = 1}, 0.14)
-            fieldGlow:SetActive(false, true)
             if not usable(control) then return end
             set(valueBox.Text, false, true)
             formatValue()

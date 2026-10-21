@@ -3,7 +3,7 @@ local Eclipse = loadstring(game:HttpGet("https://raw.githubusercontent.com/VexyE
 
 local Window = Eclipse:CreateWindow({
     Name = "Eclipse Hub",
-    Subtitle = "TOTALITY / v1.3.0",
+    Subtitle = "TOTALITY / v1.3.1",
     LoadingTitle = "ECLIPSE",
     LoadingSubtitle = "INTERFACE INITIALIZATION",
     ShowText = "ECLIPSE",
@@ -83,7 +83,7 @@ Settings:CreateDropdown({Name = "Theme", Options = {"Default", "CyberYellow", "A
     CurrentOption = {"Default"}, MultipleOptions = false, Flag = "DemoTheme", Callback = function(selected)
         if selected[1] then Window.ModifyTheme(selected[1]) end
     end})
-Settings:CreateColorPicker({Name = "Demo Highlight", Color = Color3.fromRGB(168, 154, 255), Flag = "DemoColor",
+Settings:CreateColorPicker({Name = "Demo Highlight", Color = Color3.fromRGB(37, 99, 235), Flag = "DemoColor",
     Tooltip = "Open the HSV map, hue slider, hex and RGB fields.", Callback = report("Highlight")})
 Settings:CreateInput({Name = "Profile Name", CurrentValue = "", PlaceholderText = "Choose a custom name",
     RemoveTextAfterFocusLost = false, Flag = "DemoProfileName", Callback = report("Profile Name")})
@@ -91,13 +91,8 @@ Settings:CreateInput({Name = "Number Entry", CurrentValue = "75", Numeric = true
     RemoveTextAfterFocusLost = false, Flag = "DemoNumber", Callback = report("Number Entry")})
 
 Settings:CreateSection("Feedback")
-Settings:CreateButton({Name = "Show Notification", Callback = function()
-    Eclipse:Notify({Title = "ECLIPSE / READY", Content = "The interface is ready. This showcase has no gameplay effects.", Duration = 5,
-        Actions = {{Text = "ACKNOWLEDGE", Callback = function() print("[Eclipse Demo] Notification acknowledged.") end}}})
-end})
-Settings:CreateButton({Name = "Open Dialog", Callback = function()
-    Eclipse:CreateDialog({Title = "DEMO PROMPT", Content = "This is a local interface demonstration. Continue prints a message to the console.",
-        Buttons = {{Text = "CANCEL"}, {Text = "CONTINUE", Callback = function() print("[Eclipse Demo] Dialog continued.") end}}})
+Settings:CreateButton({Name = "Print Status", Callback = function()
+    print("[Eclipse Demo] Interface ready.")
 end})
 Settings:CreateParagraph({Title = "Persistence", Content = "Configuration saving is disabled in this demo. The standalone library can save flagged controls; Eclipse Premium keeps its own profile system."})
 Settings:CreateButton({Name = "Close Interface", Callback = function() Eclipse:Destroy() end})
