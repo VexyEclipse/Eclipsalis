@@ -273,10 +273,10 @@ return function(Library, ctx)
         local control, row, label = ctx.row(self, options, 46)
         control.Type = "Input"
         local numeric = options.Numeric == true or options.NumbersOnly == true
-        compactLabel(label, 154, 46)
+        compactLabel(label, 138, 46)
         local field = new("Frame", {
             Name = "InputField", AnchorPoint = Vector2.new(1, .5), Position = UDim2.new(1, -10, .5, 0),
-            Size = UDim2.fromOffset(132, 28), BorderSizePixel = 0,
+            Size = UDim2.fromOffset(116, 28), BorderSizePixel = 0,
         }, row)
         local focused = false
         local function fieldColor(t) return t.Base:Lerp(focused and t.Accent or t.Primary, focused and 0.14 or 0.08) end

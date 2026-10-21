@@ -1,6 +1,6 @@
 # Eclipse UI
 
-A compact modern interface for Eclipse. Black, white and blue panels, rounded cards, subtle steady accents, sliding pill switches and the original Eclipse flame logo. Version **1.3.1** (21 October) arranges every feature in one full-width row within a single vertical scrolling stack. Built directly with Roblox GUI objects, with no external UI dependency.
+A compact modern interface for Eclipse. Black, white and blue panels, rounded cards, subtle steady accents, sliding pill switches and the original Eclipse flame logo. Version **1.3.2** (22 October) restores the larger original window and two columns of grouped sections. Built directly with Roblox GUI objects, with no external UI dependency.
 
 ```lua
 local Eclipse = loadstring(game:HttpGet("https://raw.githubusercontent.com/VexyEclipse/Eclipsalis/main/EclipseUI.lua"))()
@@ -32,7 +32,7 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/VexyEclipse/Eclipsali
 ## Features
 
 - Five live themes defined by exactly three colors: `Base`, `Primary`, `Accent`.
-- Fixed 520×320 window (40% less area than 660×420), 38px header, 20px footer, 112px navigation that collapses to a 44px icon rail, and a single full-width content column with 12px spacing between sections.
+- Fixed 660×420 window, 38px header, 145px navigation that collapses to a 44px icon rail, and two section columns with 12px spacing. No status footer, ECL label or diagonal stripes.
 - Spaced L corner brackets matching the supplied SVG: 8px legs, 1px strokes, 3px outer offset; they track the window and hide with it.
 - 34px toggles/buttons/dropdowns/keybinds/color pickers and 46px sliders/inputs. Inputs and selectors sit alongside their labels. Cards have 10px corners, feature rows and tabs 8px corners, and the window 12px corners.
 - Solid-blue buttons and slider fills with faint static outlines; no section/sidebar hover shadows. A 40×22 pill switch with an 18px circular thumb and short eased switch/tab animations.
@@ -42,7 +42,7 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/VexyEclipse/Eclipsali
 
 The default theme uses Base #050505, Primary #FFFFFF and Accent #2563EB. Other presets remain available for saved profiles. All chrome colors derive from these three tokens.
 
-Controls are added to the latest section in a tab. `Section:CreateToggle(...)` also works for explicit grouping. Search only filters visibility; it never changes values. The title region smoothly drags the window on rendered frames; the movement listener stops after settling. K toggles visibility and the 36px flame-icon control reopens it, with a faint steady glow. On screens smaller than 520×320 the window retains its pixel size: dragging pans it and reopening recenters the accessible title. `OnClose` can connect the header Close action to your application's cleanup; otherwise Close destroys the UI.
+Controls are added to the latest section in a tab. `Section:CreateToggle(...)` also works for explicit grouping. Search only filters visibility; it never changes values. The title region smoothly drags the window on rendered frames; the movement listener stops after settling. K toggles visibility and the 36px flame-icon control reopens it, with a faint steady glow. On screens smaller than 660×420 the window retains its pixel size: dragging pans it and reopening recenters the accessible title. `OnClose` can connect the header Close action to your application's cleanup; otherwise Close destroys the UI.
 
 The ASCII renderer uses one shared RenderStepped connection, throttled to 18 updates per second, with bounded cell and ripple counts. Ambient glyphs remain at about 0.89–0.93 transparency; pointer-triggered ripples are disabled. The background and waveform stop while minimized, and their resources disconnect on unload. This bounds work; actual frame cost still requires measurement in Roblox.
 
@@ -103,3 +103,10 @@ Local compilation and focused drag lifecycle checks are recorded in the project 
 
 
 Local validation: library/gallery, both Premium wrappers and extracted embedded runtime compile with Luau 0.739. Actual smooth-drag helper checks pass at 30/60/120 Hz for constrained approach, frame-rate independence, exact settling, release disconnection, hide cancellation and cleanup. Rebuild is reproducible, original PNG hash matches, and Premium entry files are identical. Temporary checks were removed. Live Roblox rendering and perceived smoothness remain unverified.
+
+
+## 22 October combined layout
+
+Version 1.3.2 restores the original 660×420 fixed window, 145px sidebar (44px collapsed) and alternating two-column section layout from the supplied screenshot. Cards use 10px outer padding, 12px column/section gaps and 3px row gaps. The newer black/white/blue theme, rounded switches, subtle steady control outlines, smooth dragging, close brackets and 36px flame reopen icon remain. Removed the ECL label, diagonal registration stripes and entire status footer including the blue dot; content extends to the bottom. Inputs are narrowed to fit the restored columns. Window bounds and centering share the same dimension constants. No tooltips, section/sidebar hover halos or FPS counter return.
+
+Local validation: library and demo compile with Luau 0.739; 11 focused actual-reflow checks pass for expanded/collapsed widths, ordering, canvas bounds, filtering, empty results and hidden/destroyed sections. Build is reproducible and embedded original-logo bytes match. Temporary checks were removed. Gameplay was not changed; live Roblox appearance/input remains unverified.

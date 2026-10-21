@@ -4,9 +4,11 @@ local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
-local Library = {Flags = {}, Version = "1.3.1", Name = "Eclipse UI"}
+local Library = {Flags = {}, Version = "1.3.2", Name = "Eclipse UI"}
 local Tab = {}
 Tab.__index = Tab
+local WINDOW_WIDTH, WINDOW_HEIGHT = 660, 420
+local SIDEBAR_WIDTH, HEADER_HEIGHT = 145, 38
 local ctx = {Tab = Tab, UIS = UIS, fontMono = Enum.Font.Code, pad = 12}
 local state = {alive = true, connections = {}, threads = {}, bindings = setmetatable({}, {__mode = "k"}),
     tweens = setmetatable({}, {__mode = "k"}), tabs = {}, controls = {}, cleanups = {}, query = "", loading = false}
@@ -365,12 +367,12 @@ end
 local function sectionCaption(name) return tostring(name) end
 local function reflow(tab)
     if not state.alive or not tab.Page.Parent then return end
-    local width = math.max(160, tab.Page.AbsoluteSize.X - 24)
-    local heights = {0}
+    local width = math.max(160, tab.Page.AbsoluteSize.X - 20)
+    local heights = {0, 0}
     local gap = 12
-    local cardWidth = width
+    local cardWidth = (width - gap) / 2
     for column, frame in ipairs(tab.Columns) do
-        frame.Position = UDim2.fromOffset(12, 12)
+        frame.Position = UDim2.fromOffset(10 + (column - 1) * (cardWidth + gap), 10)
         frame.Size = UDim2.fromOffset(cardWidth, 0)
     end
     for _, section in ipairs(tab.Sections) do
@@ -392,16 +394,16 @@ local function reflow(tab)
         if visible then
             local column = section.Column
             local bodyHeight = ctx.unscale(section.Layout.AbsoluteContentSize.Y)
-            local height = math.max(40, bodyHeight + 42)
+            local height = math.max(34, bodyHeight + 36)
             section.RestPosition = UDim2.fromOffset(0, heights[column])
             section.Frame.Position = section.RestPosition
             section.Frame.Size = UDim2.fromOffset(cardWidth, height)
             heights[column] += height + gap
         end
     end
-    local height = heights[1]
+    local height = math.max(heights[1], heights[2])
     for column, frame in ipairs(tab.Columns) do frame.Size = UDim2.fromOffset(cardWidth, heights[column]) end
-    tab.Page.CanvasSize = UDim2.fromOffset(0, height + 24)
+    tab.Page.CanvasSize = UDim2.fromOffset(0, height + 20)
     if tab.Empty then tab.Empty.Visible = height == 0 end
 end
 local function queueReflow(tab)
@@ -410,7 +412,7 @@ local function queueReflow(tab)
     ctx.delay(0, function() tab.ReflowQueued = false; reflow(tab) end)
 end
 local function makeSection(tab, name, explicit)
-    local column = 1 -- All sections share one ordered, full-width vertical stack.
+    local column = #tab.Sections % 2 + 1 -- Original alternating section columns.
     local frame = ctx.new("Frame", {Name = "Section", BackgroundTransparency = 0,
         Size = UDim2.fromOffset(240, 34), ClipsDescendants = false, ZIndex = 3}, tab.Columns[column])
     ctx.bind(frame, "BackgroundColor3", function(t) return t.Base:Lerp(t.Primary, 0.035) end)
@@ -421,9 +423,9 @@ local function makeSection(tab, name, explicit)
     local rule = ctx.new("Frame", {Name = "SectionRule", Position = UDim2.fromOffset(6, 28),
         Size = UDim2.new(1, -12, 0, 1), BackgroundTransparency = .75, ZIndex = 4}, frame)
     ctx.bind(rule, "BackgroundColor3", "Primary")
-    local body = ctx.new("Frame", {Name = "Rows", BackgroundTransparency = 1, Position = UDim2.fromOffset(8, 32),
-        Size = UDim2.new(1, -16, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 4}, frame)
-    local layout = ctx.new("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6)}, body)
+    local body = ctx.new("Frame", {Name = "Rows", BackgroundTransparency = 1, Position = UDim2.fromOffset(5, 30),
+        Size = UDim2.new(1, -10, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 4}, frame)
+    local layout = ctx.new("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3)}, body)
     local section = {Name = tostring(name), Frame = frame, Header = header, Body = body, Layout = layout,
         Controls = {}, Visible = true, Explicit = explicit, Tab = tab, Column = column}
     function section:Set(value)
@@ -677,13 +679,13 @@ function Library:CreateWindow(rawOptions)
         Size = UDim2.fromScale(1, 1), ZIndex = 20}, screen)
     state.overlay = overlay
     local root = ctx.new("Frame", {Name = "Window", Position = UDim2.fromOffset(0, 0),
-        Size = UDim2.fromOffset(520, 320), ClipsDescendants = true, ZIndex = 2}, screen)
+        Size = UDim2.fromOffset(WINDOW_WIDTH, WINDOW_HEIGHT), ClipsDescendants = true, ZIndex = 2}, screen)
     state.root = root
     ctx.bind(root, "BackgroundColor3", "Base"); ctx.round(root, 12); ctx.stroke(root, "Primary", .7)
     -- Four detached L brackets follow the fixed window, matching the supplied SVG.
     -- Short, thin brackets sit three pixels outside the rounded body.
     local brackets = ctx.new("Frame", {Name = "WindowCornerBrackets", BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(-3, -3), Size = UDim2.fromOffset(526, 326), Active = false, ZIndex = 3}, screen)
+        Position = UDim2.fromOffset(-3, -3), Size = UDim2.fromOffset(WINDOW_WIDTH + 6, WINDOW_HEIGHT + 6), Active = false, ZIndex = 3}, screen)
     for _, corner in ipairs({{0, 0}, {1, 0}, {0, 1}, {1, 1}}) do
         local x, y = corner[1], corner[2]
         local holder = ctx.new("Frame", {Name = "CornerBracket", BackgroundTransparency = 1,
@@ -702,7 +704,7 @@ function Library:CreateWindow(rawOptions)
     ctx.connect(root:GetPropertyChangedSignal("Position"), syncBrackets)
     ctx.connect(root:GetPropertyChangedSignal("Visible"), syncBrackets)
     syncBrackets()
-    state.width, state.height = 520, 320
+    state.width, state.height = WINDOW_WIDTH, WINDOW_HEIGHT
     local window = {Flags = self.Flags, Tabs = state.tabs, Name = options.Name or "Eclipse", Frame = root}
     state.window = window; self.Window = window
     window.ModifyTheme = function(first, second) return self:ModifyTheme(first == window and second or first) end
@@ -716,7 +718,7 @@ function Library:CreateWindow(rawOptions)
         Size = UDim2.fromScale(1, 1), Visible = false, ZIndex = 2}, root)
     state.canvas = canvas
     local ambientFrame = ctx.new("Frame", {Name = "DigitalAtmosphere", BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(0, 38), Size = UDim2.new(1, 0, 1, -58), ClipsDescendants = true, ZIndex = 2}, canvas)
+        Position = UDim2.fromOffset(0, 38), Size = UDim2.new(1, 0, 1, -HEADER_HEIGHT), ClipsDescendants = true, ZIndex = 2}, canvas)
     state.atmosphere = ctx.createAtmosphere(ambientFrame, {Mode = "ambient", Running = false, ZIndex = 2})
     local header = ctx.new("Frame", {Name = "Header", Size = UDim2.new(1, 0, 0, 38), ZIndex = 7}, canvas)
     ctx.bind(header, "BackgroundColor3", function(t) return t.Base:Lerp(t.Primary, .025) end)
@@ -724,7 +726,7 @@ function Library:CreateWindow(rawOptions)
         Size = UDim2.new(1, 0, 0, 1), BackgroundTransparency = .6, ZIndex = 8}, header)
     ctx.bind(headerRule, "BackgroundColor3", "Primary")
     logo(header, image, UDim2.fromOffset(8, 3), UDim2.fromOffset(32, 32))
-    ctx.text(header, string.upper(window.Name), {Position = UDim2.fromOffset(46, 3), Size = UDim2.fromOffset(178, 20),
+    ctx.text(header, window.Name, {Position = UDim2.fromOffset(46, 3), Size = UDim2.fromOffset(178, 20),
         TextSize = 14, Font = Enum.Font.GothamBold, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 8})
     ctx.text(header, options.Subtitle or "TOTALITY / v" .. Library.Version,
         {Position = UDim2.fromOffset(46, 22), Size = UDim2.fromOffset(178, 11), Font = ctx.fontMono,
@@ -739,7 +741,7 @@ function Library:CreateWindow(rawOptions)
     ctx.vectorIcon(searchWrap, "search", {Position = UDim2.fromOffset(7, 6), Size = UDim2.fromOffset(14, 14), ZIndex = 9})
     local searchGlow = ctx.glow(searchWrap, 6)
     local search = ctx.new("TextBox", {Name = "Search", Position = UDim2.fromOffset(27, 0),
-        Size = UDim2.new(1, -33, 1, 0), PlaceholderText = "SEARCH", Text = "", BackgroundTransparency = 1,
+        Size = UDim2.new(1, -33, 1, 0), PlaceholderText = "Search controls", Text = "", BackgroundTransparency = 1,
         ClearTextOnFocus = false, Font = ctx.fontMono, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left,
         ZIndex = 9}, searchWrap)
     ctx.bind(search, "TextColor3", "Primary"); ctx.bind(search, "PlaceholderColor3", "Primary")
@@ -751,9 +753,9 @@ function Library:CreateWindow(rawOptions)
         for _, tab in ipairs(state.tabs) do queueReflow(tab) end
     end)
     state.collapsed = options.SidebarCollapsed == true or UIS.TouchEnabled
-    local sideWidth = state.collapsed and 44 or 112
+    local sideWidth = state.collapsed and 44 or SIDEBAR_WIDTH
     local sidebar = ctx.new("Frame", {Name = "Sidebar", Position = UDim2.fromOffset(0, 38),
-        Size = UDim2.new(0, sideWidth, 1, -58), ZIndex = 6}, canvas)
+        Size = UDim2.new(0, sideWidth, 1, -HEADER_HEIGHT), ZIndex = 6}, canvas)
     ctx.bind(sidebar, "BackgroundColor3", function(t) return t.Base:Lerp(t.Primary, .025) end)
     state.sidebar = sidebar
     ctx.round(sidebar, 10)
@@ -763,32 +765,15 @@ function Library:CreateWindow(rawOptions)
     local indexLabel = ctx.text(sidebar, "INDEX / 01", {Position = UDim2.fromOffset(39, 4),
         Size = UDim2.new(1, -43, 0, 25), Font = ctx.fontMono, TextSize = 8,
         TextTransparency = .45, Visible = not state.collapsed, ZIndex = 7})
-    local registration = ctx.new("Frame", {Name = "RegistrationStripes", BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 1, -38), Size = UDim2.new(1, -20, 0, 18), ClipsDescendants = true, ZIndex = 7}, sidebar)
-    for i = 0, 8 do
-        local stripe = ctx.new("Frame", {Position = UDim2.fromOffset(i * 12, -3),
-            Size = UDim2.fromOffset(4, 24), Rotation = 40, BackgroundTransparency = .3, ZIndex = 7}, registration)
-        ctx.bind(stripe, "BackgroundColor3", "Primary")
-    end
-    ctx.text(sidebar, "E C L", {Position = UDim2.new(0, 10, 1, -18), Size = UDim2.new(1, -20, 0, 12),
-        Font = ctx.fontMono, TextSize = 8, TextTransparency = .55, ZIndex = 7})
     local nav = ctx.new("ScrollingFrame", {Name = "Tabs", Position = UDim2.fromOffset(5, 34),
-        Size = UDim2.new(1, -10, 1, -80), BackgroundTransparency = 1, ScrollBarThickness = 1,
+        Size = UDim2.new(1, -10, 1, -42), BackgroundTransparency = 1, ScrollBarThickness = 1,
         AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ScrollingDirection = Enum.ScrollingDirection.Y,
         ZIndex = 7}, sidebar)
     ctx.bind(nav, "ScrollBarImageColor3", "Accent")
     ctx.new("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4)}, nav)
     local content = ctx.new("Frame", {Name = "Content", Position = UDim2.fromOffset(sideWidth, 38),
-        Size = UDim2.new(1, -sideWidth, 1, -58), BackgroundTransparency = 1, ClipsDescendants = true, ZIndex = 3}, canvas)
+        Size = UDim2.new(1, -sideWidth, 1, -HEADER_HEIGHT), BackgroundTransparency = 1, ClipsDescendants = true, ZIndex = 3}, canvas)
     state.content = content
-    local footer = ctx.new("Frame", {Name = "Telemetry", Position = UDim2.new(0, 0, 1, -20),
-        Size = UDim2.new(1, 0, 0, 20), ZIndex = 7}, canvas)
-    ctx.bind(footer, "BackgroundColor3", function(t) return t.Base:Lerp(t.Primary, .02) end)
-    local footerRule = ctx.new("Frame", {Name = "FooterRule", Size = UDim2.new(1, 0, 0, 1),
-        BackgroundTransparency = .6, ZIndex = 8}, footer)
-    ctx.bind(footerRule, "BackgroundColor3", "Primary")
-    local dot = ctx.new("Frame", {Position = UDim2.fromOffset(10, 8), Size = UDim2.fromOffset(4, 4), ZIndex = 8}, footer)
-    ctx.bind(dot, "BackgroundColor3", "Accent"); ctx.round(dot, 2)
     local function visualRunning(running)
         state.atmosphere:SetRunning(running); state.watermark:SetRunning(running)
     end
@@ -802,10 +787,10 @@ function Library:CreateWindow(rawOptions)
         local size = viewport()
         if size.X <= 0 or size.Y <= 0 then return end
         if reset then
-            root.Position = UDim2.fromOffset(math.max(0, math.floor((size.X - 520) / 2)), math.max(0, math.floor((size.Y - 360) / 2)))
+            root.Position = UDim2.fromOffset(math.max(0, math.floor((size.X - WINDOW_WIDTH) / 2)), math.max(0, math.floor((size.Y - WINDOW_HEIGHT) / 2)))
         else
-            root.Position = UDim2.fromOffset(math.clamp(root.Position.X.Offset, math.min(0, size.X - 520), math.max(0, size.X - 44)),
-                math.clamp(root.Position.Y.Offset, math.min(0, size.Y - 360), math.max(0, size.Y - 38)))
+            root.Position = UDim2.fromOffset(math.clamp(root.Position.X.Offset, math.min(0, size.X - WINDOW_WIDTH), math.max(0, size.X - 44)),
+                math.clamp(root.Position.Y.Offset, math.min(0, size.Y - WINDOW_HEIGHT), math.max(0, size.Y - 38)))
         end
     end
     local floating = ctx.new("TextButton", {Name = "Reopen", Text = "",
@@ -856,9 +841,9 @@ function Library:CreateWindow(rawOptions)
     function window:SetSidebarCollapsed(value)
         state.collapsed = value == true; closePopup()
         indexLabel.Visible = not state.collapsed
-        local width = state.collapsed and 44 or 112
-        ctx.tween(sidebar, {Size = UDim2.new(0, width, 1, -58)}, .18)
-        ctx.tween(content, {Position = UDim2.fromOffset(width, 38), Size = UDim2.new(1, -width, 1, -58)}, .18)
+        local width = state.collapsed and 44 or SIDEBAR_WIDTH
+        ctx.tween(sidebar, {Size = UDim2.new(0, width, 1, -HEADER_HEIGHT)}, .18)
+        ctx.tween(content, {Position = UDim2.fromOffset(width, 38), Size = UDim2.new(1, -width, 1, -HEADER_HEIGHT)}, .18)
         for _, tab in ipairs(state.tabs) do tab.NavLabel.Visible = not state.collapsed; queueReflow(tab) end
     end
     ctx.connect(collapse.Activated, function() window:SetSidebarCollapsed(not state.collapsed) end)
@@ -907,7 +892,7 @@ function Library:CreateWindow(rawOptions)
             CanvasSize = UDim2.new(), ScrollBarThickness = 2, ScrollingDirection = Enum.ScrollingDirection.Y,
             Visible = false, ZIndex = 3}, content)
         ctx.bind(page, "ScrollBarImageColor3", "Accent"); tab.Page = page
-        for _, columnName in ipairs({"ContentStack"}) do
+        for _, columnName in ipairs({"LeftColumn", "RightColumn"}) do
             table.insert(tab.Columns, ctx.new("Frame", {Name = columnName, BackgroundTransparency = 1, Size = UDim2.fromOffset(0, 0), ZIndex = 3}, page))
         end
         tab.Empty = ctx.text(page, "No matching controls", {Position = UDim2.fromOffset(12, 12),
@@ -939,8 +924,8 @@ function Library:CreateWindow(rawOptions)
         Size = UDim2.new(1, -214, 0, 38), Active = true, ZIndex = 10}, header)
     stopWindowDrag = ctx.smoothDrag(dragHandle, root, function(position)
         local size = viewport()
-        return Vector2.new(math.clamp(position.X, math.min(0, size.X - 520), math.max(0, size.X - 44)),
-            math.clamp(position.Y, math.min(0, size.Y - 320), math.max(0, size.Y - 38)))
+        return Vector2.new(math.clamp(position.X, math.min(0, size.X - WINDOW_WIDTH), math.max(0, size.X - 44)),
+            math.clamp(position.Y, math.min(0, size.Y - WINDOW_HEIGHT), math.max(0, size.Y - 38)))
     end)
     ctx.connect(overlay:GetPropertyChangedSignal("AbsoluteSize"), function()
         stopWindowDrag(); place(false); closePopup(); hideTooltip()

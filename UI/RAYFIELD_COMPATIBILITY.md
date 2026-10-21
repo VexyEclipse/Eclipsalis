@@ -1,6 +1,6 @@
 # Eclipse UI: Rayfield compatibility reference
 
-Reviewed against the official documentation on **18–19 October 2026**. The standalone build is `Current/EclipseUI.lua`, assembled from `UI/Core.lua`, `UI/Atmosphere.lua`, `UI/Controls.lua` and `UI/Advanced.lua`. The 1.3.1 minimal redesign preserves the control/flag contracts below. This records the migration contract and the differences that matter when adapting other scripts. The current module source and its local validation results remain the authority for implemented behavior. This is not a claim that every service integration or every Rayfield Gen2 extension is reproduced.
+Reviewed against the official documentation on **18–19 October 2026**. The standalone build is `Current/EclipseUI.lua`, assembled from `UI/Core.lua`, `UI/Atmosphere.lua`, `UI/Controls.lua` and `UI/Advanced.lua`. The 1.3.2 combined-layout redesign preserves the control/flag contracts below. This records the migration contract and the differences that matter when adapting other scripts. The current module source and its local validation results remain the authority for implemented behavior. This is not a claim that every service integration or every Rayfield Gen2 extension is reproduced.
 
 ## Eclipse Premium contract
 
