@@ -1,7 +1,7 @@
 -- Bounded procedural ASCII decoration. Installed before controls in the standalone build.
 return function(Library, ctx)
     local RunService = game:GetService("RunService")
-    local glyphs = {".", "+", ":", "░", "0", "1", "/"}
+    local glyphs = {".", "+", ":", "|", "-", ".", "/"}
     local handles, slices = {}, {}
     local connection, accumulated, disposed = nil, 0, false
     local interval, rippleLifetime = 1 / 18, 1.2
@@ -116,8 +116,8 @@ return function(Library, ctx)
         local mode = string.lower(tostring(options.Mode or "ambient"))
         if mode ~= "boot" and mode ~= "watermark" then mode = "ambient" end
         local glyphSize = math.clamp(number(options.GlyphSize, mode == "watermark" and 9 or 12), 8, 16)
-        local width = parent.AbsoluteSize.X > 0 and parent.AbsoluteSize.X or (mode == "boot" and 300 or 660)
-        local height = parent.AbsoluteSize.Y > 0 and parent.AbsoluteSize.Y or (mode == "boot" and 240 or 362)
+        local width = parent.AbsoluteSize.X > 0 and parent.AbsoluteSize.X or (mode == "boot" and 300 or 520)
+        local height = parent.AbsoluteSize.Y > 0 and parent.AbsoluteSize.Y or (mode == "boot" and 240 or 262)
         local cap = mode == "ambient" and 240 or (mode == "boot" and 160 or 32)
         local columns = mode == "watermark" and 24 or math.floor(width / (glyphSize * 1.65))
         local rows = mode == "watermark" and 1 or math.floor(height / (glyphSize * 1.8))

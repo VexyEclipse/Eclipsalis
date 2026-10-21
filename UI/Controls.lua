@@ -86,24 +86,7 @@ return function(Library, ctx)
         ctx.round(badge, 5)
         ctx.vectorIcon(badge, "arrow", {Name = "ActionIcon", Position = UDim2.fromOffset(5, 5),
             Size = UDim2.fromOffset(12, 12), Role = "Accent"})
-        local shimmer = new("Frame", {
-            Name = "HoverShimmer", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
-            BorderSizePixel = 0, Active = false,
-        }, row)
-        bind(shimmer, "BackgroundColor3", "Accent")
-        ctx.round(shimmer, 5)
-        local sheen = new("UIGradient", {Rotation = 18, Offset = Vector2.new(-1, 0),
-            Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1),
-                NumberSequenceKeypoint.new(0.38, 1), NumberSequenceKeypoint.new(0.5, 0.25),
-                NumberSequenceKeypoint.new(0.62, 1), NumberSequenceKeypoint.new(1, 1)})}, shimmer)
-        ctx.connect(row.MouseEnter, function()
-            if not usable(control) then return end
-            sheen.Offset = Vector2.new(-1, 0)
-            tween(shimmer, {BackgroundTransparency = 0.72}, 0.12)
-            tween(sheen, {Offset = Vector2.new(1, 0)}, 0.58)
-        end)
-        ctx.connect(row.MouseLeave, function() tween(shimmer, {BackgroundTransparency = 1}, 0.18) end)
-        local glow = ctx.glow(row, 5)
+        local glow = ctx.glow(row, 8)
         local flash = border(row)
         local generation = 0
         ctx.connect(row.Activated, function()
@@ -144,20 +127,21 @@ return function(Library, ctx)
         compactLabel(label, 64)
         local track = new("Frame", {
             Name = "ToggleTrack", AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0),
-            Size = UDim2.fromOffset(36, 18), BorderSizePixel = 0,
+            Size = UDim2.fromOffset(40, 22), BorderSizePixel = 0,
         }, row)
         local function trackColor(t) return control.CurrentValue and t.Accent or t.Base:Lerp(t.Primary, 0.16) end
         bind(track, "BackgroundColor3", trackColor)
-        ctx.round(track, 9)
-        local glow = ctx.glow(track, 9, 0.85)
+        ctx.round(track, 11)
+        local glow = ctx.glow(track, 11, 0.72)
         local block = new("Frame", {
-            Name = "ToggleThumb", Position = UDim2.fromOffset(2, 2), Size = UDim2.fromOffset(14, 14), BorderSizePixel = 0,
+            Name = "ToggleThumb", Position = UDim2.fromOffset(2, 2), Size = UDim2.fromOffset(18, 18), BorderSizePixel = 0,
         }, track)
-        bind(block, "BackgroundColor3", "Primary")
-        ctx.round(block, 7)
+        bind(block, "BackgroundColor3", function(t) return control.CurrentValue and t.Base or t.Primary end)
+        ctx.round(block, 9)
         local function render(animate)
             local enabled = control.CurrentValue
-            local duration = animate and 0.24 or 0
+            bind(block, "BackgroundColor3", function(t) return enabled and t.Base or t.Primary end, animate)
+            local duration = animate and 0.18 or 0
             ctx.spring(block, {Position = UDim2.fromOffset(enabled and 20 or 2, 2)}, duration)
             tween(track, {BackgroundColor3 = trackColor(ctx.theme())}, animate and 0.16 or 0)
             glow:SetActive(enabled, animate)
@@ -315,10 +299,10 @@ return function(Library, ctx)
         local control, row, label = ctx.row(self, options, 46)
         control.Type = "Input"
         local numeric = options.Numeric == true or options.NumbersOnly == true
-        compactLabel(label, 142, 46)
+        compactLabel(label, 154, 46)
         local field = new("Frame", {
-            Name = "InputField", AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -9, 0.5, 0),
-            Size = UDim2.fromOffset(122, 26), BorderSizePixel = 0,
+            Name = "InputField", AnchorPoint = Vector2.new(1, .5), Position = UDim2.new(1, -10, .5, 0),
+            Size = UDim2.fromOffset(132, 28), BorderSizePixel = 0,
         }, row)
         local focused = false
         local function fieldColor(t) return t.Base:Lerp(focused and t.Accent or t.Primary, focused and 0.14 or 0.08) end

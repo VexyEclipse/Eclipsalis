@@ -1,6 +1,6 @@
 # Eclipse UI: Rayfield compatibility reference
 
-Reviewed against the official documentation on **18–19 October 2026**. The standalone build is `Current/EclipseUI.lua`, assembled from `UI/Core.lua`, `UI/Atmosphere.lua`, `UI/Controls.lua` and `UI/Advanced.lua`. The 1.1.0 visual overhaul preserves the control/flag contracts below. This records the migration contract and the differences that matter when adapting other scripts. The current module source and its local validation results remain the authority for implemented behavior. This is not a claim that every service integration or every Rayfield Gen2 extension is reproduced.
+Reviewed against the official documentation on **18–19 October 2026**. The standalone build is `Current/EclipseUI.lua`, assembled from `UI/Core.lua`, `UI/Atmosphere.lua`, `UI/Controls.lua` and `UI/Advanced.lua`. The 1.3.0 modern redesign preserves the control/flag contracts below. This records the migration contract and the differences that matter when adapting other scripts. The current module source and its local validation results remain the authority for implemented behavior. This is not a claim that every service integration or every Rayfield Gen2 extension is reproduced.
 
 ## Eclipse Premium contract
 
@@ -48,13 +48,13 @@ No analytics, heartbeat requests, Discord joining, remote key checks, or claims 
 
 ## Logo and hosting
 
-`Assets/eclipse-logo.png` is the exact supplied transparent 500 × 500 PNG. The visible emblem occupies approximately x = 175–322, y = 60–415; account for this generous canvas padding when sizing a small icon. `Assets/eclipse-logo.svg` is a two-path vector trace with the same proportions and transparent background, inspected after rendering. Roblox `ImageLabel` uses the PNG/custom asset or a published image asset ID; the SVG is a source/preview asset rather than a Roblox image upload identifier.
+The owner selected the original white flame logo on 21 October. `Assets/eclipse-logo.png` is the original transparent 500×500 PNG, embedded in the module; the original two-path SVG trace remains in `Assets/eclipse-logo.svg`. The local custom-asset path uses `writefile` and `getcustomasset`/`getsynasset`, with an E monogram fallback. The original image crop at (168,52), size 162×372, removes canvas padding. Explicit `LogoId`/`Icon` assets remain uncropped. Generated concepts are not used.
 
 The owner selected [VexyEclipse/Eclipsalis](https://github.com/VexyEclipse/Eclipsalis) for the standalone library. It is loaded with the familiar `loadstring(game:HttpGet(rawUrl))()` pattern. The final raw URL must match the entry file actually published in that repository; a local file path or an uncreated branch is not a working hosted loader. Keep this compatibility reference separate from any publication check until the remote file has been verified.
 
 ## Validation boundary
 
-The owner's newer layout request takes precedence over the original responsive-sizing brief: the main window stays 660×420 without UIScale or resizing, and always uses two equal columns. Touch gestures remain supported. On smaller viewports users can pan the fixed window and reopen it to restore an accessible title region. Native vector navigation replaces numeric fallbacks. Decorative ASCII now lives in the environment/boot/transitions, rather than bracket-shaped controls. Detached corner brackets sit outside the clipped rounded window.
+The owner's newer layout request takes precedence over the original responsive-sizing brief: the main window stays 520×320 without UIScale or resizing, and uses one full-width vertical column with one feature per row. Touch gestures remain supported. On smaller viewports users can pan the fixed window and reopen it to restore an accessible title region. Native vector navigation replaces numeric fallbacks. Decorative ASCII now lives in the environment/boot/transitions, rather than bracket-shaped controls. Detached corner brackets sit outside the clipped rounded window.
 
 Compile the standalone library, the Premium outer wrapper, and the extracted embedded Premium runtime. Useful temporary checks cover setter/callback order, flags, dropdown pruning, config serialization and missing executor functions, section filtering/reflow, and repeated cleanup. Keep temporary verification outside the project and remove it afterward; do not recreate `Current/tests`.
 

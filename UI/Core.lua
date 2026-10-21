@@ -4,7 +4,7 @@ local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
-local Library = {Flags = {}, Version = "1.1.0", Name = "Eclipse UI"}
+local Library = {Flags = {}, Version = "1.3.0", Name = "Eclipse UI"}
 local Tab = {}
 Tab.__index = Tab
 local ctx = {Tab = Tab, UIS = UIS, fontMono = Enum.Font.Code, pad = 12}
@@ -14,7 +14,7 @@ local function palette(base, primary, accent)
     return {Base = Color3.fromHex(base), Primary = Color3.fromHex(primary), Accent = Color3.fromHex(accent)}
 end
 Library.Themes = {
-    Default = palette("0A0A0E", "EEEEF4", "A89AFF"),
+    Default = palette("050505", "EFEFEF", "FFFFFF"),
     CyberYellow = palette("0B0C0B", "F2F2E8", "FCEE09"),
     AmberGlow = palette("100D09", "F2EEE6", "FF9E00"),
     NeonCyan = palette("080E11", "E5F1F3", "00F0FF"),
@@ -101,7 +101,7 @@ function ctx.tween(object, goals, duration, easing)
     animation:Play()
     return animation
 end
-function ctx.spring(object, goals, duration) return ctx.tween(object, goals, duration or 0.23, Enum.EasingStyle.Back) end
+function ctx.spring(object, goals, duration) return ctx.tween(object, goals, duration or 0.18, Enum.EasingStyle.Quart) end
 local function color(role)
     return type(role) == "function" and role(state.theme) or state.theme[role]
 end
@@ -119,33 +119,32 @@ function ctx.stroke(parent, role, transparency)
 end
 function ctx.round(parent, radius)
     local corner = parent:FindFirstChildOfClass("UICorner") or ctx.new("UICorner", {}, parent)
-    corner.CornerRadius = UDim.new(0, radius or 5)
+    corner.CornerRadius = UDim.new(0, radius or 8)
     return corner
 end
--- Accent bloom uses two broad, translucent strokes, with no downloaded shadow asset.
-function ctx.glow(parent, radius, strength)
+-- Layered translucent outlines give a soft halo without assets or animation loops.
+function ctx.glow(parent, radius, strength, idle)
     local layer = ctx.new("Frame", {Name = "AccentBloom", BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(-2, -2), Size = UDim2.new(1, 4, 1, 4),
+        Position = UDim2.fromOffset(-1, -1), Size = UDim2.new(1, 2, 1, 2),
         Active = false, ZIndex = parent.ZIndex}, parent)
-    ctx.round(layer, (radius or 5) + 2)
-    local inner = ctx.stroke(layer, "Accent", 1); inner.Thickness = 3
-    local outerLayer = ctx.new("Frame", {Name = "BloomHalo", BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(-2, -2), Size = UDim2.new(1, 4, 1, 4), Active = false,
-        ZIndex = layer.ZIndex}, layer)
-    ctx.round(outerLayer, (radius or 5) + 4)
-    local outer = ctx.stroke(outerLayer, "Accent", 1); outer.Thickness = 5
+    ctx.round(layer, (radius or 8) + 1)
+    local inner = ctx.stroke(layer, "Accent", idle or 1); inner.Thickness = 3
+    local halo = ctx.new("Frame", {Name = "BloomHalo", BackgroundTransparency = 1,
+        Size = UDim2.fromScale(1, 1), Active = false, ZIndex = layer.ZIndex}, layer)
+    ctx.round(halo, (radius or 8) + 1)
+    local outer = ctx.stroke(halo, "Accent", idle and math.min(.985, idle + .04) or 1); outer.Thickness = 7
     local glow = {Active = false, Frame = layer, Generation = 0}
-    local alpha = math.clamp(tonumber(strength) or 0.75, 0.6, 0.8)
+    local alpha = math.clamp(tonumber(strength) or 0.76, 0.6, 0.9)
     function glow:SetActive(active, animate)
         self.Active = active == true
-        ctx.tween(inner, {Transparency = self.Active and alpha or 1}, animate == false and 0 or 0.16)
-        ctx.tween(outer, {Transparency = self.Active and math.min(0.94, alpha + 0.14) or 1}, animate == false and 0 or 0.2)
+        ctx.tween(inner, {Transparency = self.Active and alpha or idle or 1}, animate == false and 0 or 0.16)
+        ctx.tween(outer, {Transparency = self.Active and math.min(.96, alpha + .13) or (idle and math.min(.985, idle + .04) or 1)}, animate == false and 0 or .18)
     end
     function glow:Pulse()
         self.Generation += 1
         local generation = self.Generation
-        ctx.tween(inner, {Transparency = 0.6}, 0.07)
-        ctx.tween(outer, {Transparency = 0.8}, 0.07)
+        ctx.tween(inner, {Transparency = 0.55}, 0.07)
+        ctx.tween(outer, {Transparency = 0.82}, 0.07)
         ctx.delay(0.12, function()
             if layer.Parent and self.Generation == generation then self:SetActive(self.Active) end
         end)
@@ -370,12 +369,12 @@ end
 local function sectionCaption(name) return tostring(name) end
 local function reflow(tab)
     if not state.alive or not tab.Page.Parent then return end
-    local width = math.max(160, tab.Page.AbsoluteSize.X - 20)
-    local heights = {0, 0}
+    local width = math.max(160, tab.Page.AbsoluteSize.X - 24)
+    local heights = {0}
     local gap = 12
-    local cardWidth = (width - gap) / 2
+    local cardWidth = width
     for column, frame in ipairs(tab.Columns) do
-        frame.Position = UDim2.fromOffset(10 + (column - 1) * (cardWidth + gap), 10)
+        frame.Position = UDim2.fromOffset(12, 12)
         frame.Size = UDim2.fromOffset(cardWidth, 0)
     end
     for _, section in ipairs(tab.Sections) do
@@ -388,7 +387,7 @@ local function reflow(tab)
             if visible then count += 1 end
             if control.Stroke and control.Stroke.Parent then
                 ctx.bind(control.Stroke, "Color", state.query ~= "" and visible and "Accent" or "Primary")
-                control.Stroke.Transparency = state.query ~= "" and visible and 0.72 or 0.96
+                control.Stroke.Transparency = state.query ~= "" and visible and 0.4 or 0.86
             end
         end
         local visible = section.Visible ~= false and (count > 0 or (state.query == "" and section.Explicit))
@@ -397,16 +396,16 @@ local function reflow(tab)
         if visible then
             local column = section.Column
             local bodyHeight = ctx.unscale(section.Layout.AbsoluteContentSize.Y)
-            local height = math.max(34, bodyHeight + 36)
+            local height = math.max(40, bodyHeight + 42)
             section.RestPosition = UDim2.fromOffset(0, heights[column])
             section.Frame.Position = section.RestPosition
             section.Frame.Size = UDim2.fromOffset(cardWidth, height)
             heights[column] += height + gap
         end
     end
-    local height = math.max(heights[1], heights[2])
+    local height = heights[1]
     for column, frame in ipairs(tab.Columns) do frame.Size = UDim2.fromOffset(cardWidth, heights[column]) end
-    tab.Page.CanvasSize = UDim2.fromOffset(0, height + 20)
+    tab.Page.CanvasSize = UDim2.fromOffset(0, height + 24)
     if tab.Empty then tab.Empty.Visible = height == 0 end
 end
 local function queueReflow(tab)
@@ -415,27 +414,26 @@ local function queueReflow(tab)
     ctx.delay(0, function() tab.ReflowQueued = false; reflow(tab) end)
 end
 local function makeSection(tab, name, explicit)
-    local column = #tab.Sections % 2 + 1
+    local column = 1 -- All sections share one ordered, full-width vertical stack.
     local frame = ctx.new("Frame", {Name = "Section", BackgroundTransparency = 0,
         Size = UDim2.fromOffset(240, 34), ClipsDescendants = false, ZIndex = 3}, tab.Columns[column])
-    ctx.bind(frame, "BackgroundColor3", function(t) return t.Base:Lerp(t.Primary, 0.04) end)
-    ctx.round(frame, 6); ctx.stroke(frame, "Primary", 0.91)
+    ctx.bind(frame, "BackgroundColor3", function(t) return t.Base:Lerp(t.Primary, 0.035) end)
+    ctx.round(frame, 10); ctx.stroke(frame, "Primary", 0.88)
     local header = ctx.text(frame, sectionCaption(name), {Position = UDim2.fromOffset(16, 0),
-        Size = UDim2.new(1, -24, 0, 29), Font = Enum.Font.GothamBold, TextSize = 11,
+        Size = UDim2.new(1, -24, 0, 29), Font = Enum.Font.GothamMedium, TextSize = 11,
         TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 4})
     local bar = ctx.new("Frame", {Name = "HeaderAccent", Position = UDim2.fromOffset(7, 9),
         Size = UDim2.fromOffset(2, 11), ZIndex = 4}, frame)
     ctx.bind(bar, "BackgroundColor3", "Accent"); ctx.round(bar, 1)
-    ctx.glow(bar, 1):SetActive(true, false)
-    local edge = ctx.new("Frame", {Name = "HoverAccent", Size = UDim2.fromOffset(32, 2),
-        Position = UDim2.fromOffset(7, 0), BackgroundTransparency = 1, ZIndex = 4}, frame)
-    ctx.bind(edge, "BackgroundColor3", "Accent"); ctx.round(edge, 1)
-    local bloom = ctx.glow(edge, 2)
-    ctx.connect(frame.MouseEnter, function() ctx.tween(edge, {BackgroundTransparency = 0}, .12); bloom:SetActive(true) end)
-    ctx.connect(frame.MouseLeave, function() ctx.tween(edge, {BackgroundTransparency = 1}, .18); bloom:SetActive(false) end)
-    local body = ctx.new("Frame", {Name = "Rows", BackgroundTransparency = 1, Position = UDim2.fromOffset(5, 30),
-        Size = UDim2.new(1, -10, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 4}, frame)
-    local layout = ctx.new("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3)}, body)
+    local rule = ctx.new("Frame", {Name = "SectionRule", Position = UDim2.fromOffset(6, 28),
+        Size = UDim2.new(1, -12, 0, 1), BackgroundTransparency = .75, ZIndex = 4}, frame)
+    ctx.bind(rule, "BackgroundColor3", "Primary")
+    local bloom = ctx.glow(frame, 10, .83, .94)
+    ctx.connect(frame.MouseEnter, function() bloom:SetActive(true) end)
+    ctx.connect(frame.MouseLeave, function() bloom:SetActive(false) end)
+    local body = ctx.new("Frame", {Name = "Rows", BackgroundTransparency = 1, Position = UDim2.fromOffset(8, 32),
+        Size = UDim2.new(1, -16, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 4}, frame)
+    local layout = ctx.new("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6)}, body)
     local section = {Name = tostring(name), Frame = frame, Header = header, Body = body, Layout = layout,
         Controls = {}, Visible = true, Explicit = explicit, Tab = tab, Column = column}
     function section:Set(value)
@@ -478,11 +476,12 @@ function ctx.row(tab, rawOptions, height)
     local frame = ctx.new("TextButton", {Name = "Row", Text = "", AutoButtonColor = false,
         BackgroundTransparency = 0, Size = UDim2.new(1, 0, 0, math.max(12, height or 34)),
         LayoutOrder = #section.Controls + 1, ClipsDescendants = false, ZIndex = 5}, section.Body)
-    ctx.bind(frame, "BackgroundColor3", function(t) return t.Base:Lerp(t.Primary, 0.08) end)
-    ctx.round(frame, 4)
+    ctx.bind(frame, "BackgroundColor3", function(t) return t.Base:Lerp(t.Primary, 0.035) end)
+    ctx.round(frame, 8)
+    local rowGlow = ctx.glow(frame, 8, .76, .96)
     local label = ctx.text(frame, options.Name or options.Title or "", {Position = UDim2.fromOffset(9, 0),
         Size = UDim2.new(1, -115, 1, 0), TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 6})
-    local stroke = ctx.stroke(frame, "Primary", 0.96)
+    local stroke = ctx.stroke(frame, "Primary", 0.86)
     local control = {Frame = frame, Label = label, Stroke = stroke, Options = options, _options = options,
         Name = options.Name or options.Title or "", Tab = tab, Section = section, Visible = options.Visible ~= false,
         Disabled = options.Disabled == true, Destroyed = false}
@@ -504,14 +503,10 @@ function ctx.row(tab, rawOptions, height)
     end
     local function hover(on)
         if control.Disabled then return end
-        ctx.bind(frame, "BackgroundColor3", function(t) return on and t.Base:Lerp(t.Accent, .14) or t.Base:Lerp(t.Primary, .08) end, true)
+        ctx.bind(frame, "BackgroundColor3", function(t) return on and t.Base:Lerp(t.Accent, .10) or t.Base:Lerp(t.Primary, .035) end, true)
         ctx.bind(stroke, "Color", on and "Accent" or "Primary")
-        ctx.tween(stroke, {Transparency = on and 0.72 or 0.96})
-        -- Preserve each component's label geometry; hover only shifts its X offset.
-        local position = label.Position
-        local base = control.LabelBaseX or position.X.Offset
-        if not control.LabelBaseX then control.LabelBaseX = base end
-        ctx.tween(label, {Position = UDim2.new(position.X.Scale, base + (on and 2 or 0), position.Y.Scale, position.Y.Offset)})
+        ctx.tween(stroke, {Transparency = on and 0.4 or 0.86})
+        rowGlow:SetActive(on)
     end
     ctx.connect(frame.MouseEnter, function() hover(true) end)
     ctx.connect(frame.MouseLeave, function() hover(false) end)
@@ -706,13 +701,13 @@ function Library:CreateWindow(rawOptions)
         Size = UDim2.fromScale(1, 1), ZIndex = 20}, screen)
     state.overlay = overlay
     local root = ctx.new("Frame", {Name = "Window", Position = UDim2.fromOffset(0, 0),
-        Size = UDim2.fromOffset(660, 420), ClipsDescendants = true, ZIndex = 2}, screen)
+        Size = UDim2.fromOffset(520, 320), ClipsDescendants = true, ZIndex = 2}, screen)
     state.root = root
-    ctx.bind(root, "BackgroundColor3", "Base"); ctx.round(root, 6); ctx.stroke(root, "Primary", .84)
+    ctx.bind(root, "BackgroundColor3", "Base"); ctx.round(root, 12); ctx.stroke(root, "Primary", .7)
     -- Four detached L brackets follow the fixed window, matching the supplied SVG.
     -- They sit outside the clipped rounded body, with an eight-pixel breathing gap.
     local brackets = ctx.new("Frame", {Name = "WindowCornerBrackets", BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(-8, -8), Size = UDim2.fromOffset(676, 436), Active = false, ZIndex = 3}, screen)
+        Position = UDim2.fromOffset(-8, -8), Size = UDim2.fromOffset(536, 336), Active = false, ZIndex = 3}, screen)
     for _, corner in ipairs({{0, 0}, {1, 0}, {0, 1}, {1, 1}}) do
         local x, y = corner[1], corner[2]
         local holder = ctx.new("Frame", {Name = "CornerBracket", BackgroundTransparency = 1,
@@ -731,7 +726,7 @@ function Library:CreateWindow(rawOptions)
     ctx.connect(root:GetPropertyChangedSignal("Position"), syncBrackets)
     ctx.connect(root:GetPropertyChangedSignal("Visible"), syncBrackets)
     syncBrackets()
-    state.width, state.height = 660, 420
+    state.width, state.height = 520, 320
     local window = {Flags = self.Flags, Tabs = state.tabs, Name = options.Name or "Eclipse", Frame = root}
     state.window = window; self.Window = window
     window.ModifyTheme = function(first, second) return self:ModifyTheme(first == window and second or first) end
@@ -749,24 +744,27 @@ function Library:CreateWindow(rawOptions)
     state.atmosphere = ctx.createAtmosphere(ambientFrame, {Mode = "ambient", Running = false, ZIndex = 2})
     local header = ctx.new("Frame", {Name = "Header", Size = UDim2.new(1, 0, 0, 38), ZIndex = 7}, canvas)
     ctx.bind(header, "BackgroundColor3", function(t) return t.Base:Lerp(t.Primary, .025) end)
-    logo(header, image, UDim2.fromOffset(14, 6), UDim2.fromOffset(12, 26))
-    ctx.text(header, window.Name, {Position = UDim2.fromOffset(35, 3), Size = UDim2.fromOffset(205, 20),
+    local headerRule = ctx.new("Frame", {Name = "HeaderRule", Position = UDim2.new(0, 0, 1, -1),
+        Size = UDim2.new(1, 0, 0, 1), BackgroundTransparency = .6, ZIndex = 8}, header)
+    ctx.bind(headerRule, "BackgroundColor3", "Primary")
+    logo(header, image, UDim2.fromOffset(8, 3), UDim2.fromOffset(32, 32))
+    ctx.text(header, string.upper(window.Name), {Position = UDim2.fromOffset(46, 3), Size = UDim2.fromOffset(178, 20),
         TextSize = 14, Font = Enum.Font.GothamBold, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 8})
-    ctx.text(header, options.Subtitle or "CONTROL INTERFACE / v" .. Library.Version,
-        {Position = UDim2.fromOffset(36, 22), Size = UDim2.fromOffset(205, 11), Font = ctx.fontMono,
+    ctx.text(header, options.Subtitle or "TOTALITY / v" .. Library.Version,
+        {Position = UDim2.fromOffset(46, 22), Size = UDim2.fromOffset(178, 11), Font = ctx.fontMono,
         TextSize = 8, TextTransparency = .5, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 8})
     local watermarkFrame = ctx.new("Frame", {Name = "GlyphWatermark", BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(250, 9), Size = UDim2.fromOffset(152, 20), ZIndex = 8}, header)
-    state.watermark = ctx.createWatermark(watermarkFrame, {Columns = 18, Running = false, ZIndex = 8})
-    local searchWrap = ctx.new("Frame", {Name = "SearchPill", AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, -76, 0, 6), Size = UDim2.fromOffset(156, 26), ZIndex = 8}, header)
+        Position = UDim2.fromOffset(227, 10), Size = UDim2.fromOffset(70, 18), ZIndex = 8}, header)
+    state.watermark = ctx.createWatermark(watermarkFrame, {Columns = 8, Running = false, ZIndex = 8})
+    local searchWrap = ctx.new("Frame", {Name = "SearchField", AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, -76, 0, 6), Size = UDim2.fromOffset(130, 26), ZIndex = 8}, header)
     ctx.bind(searchWrap, "BackgroundColor3", function(t) return t.Base:Lerp(t.Primary, .08) end)
     ctx.round(searchWrap, 6)
     ctx.vectorIcon(searchWrap, "search", {Position = UDim2.fromOffset(7, 6), Size = UDim2.fromOffset(14, 14), ZIndex = 9})
     local searchGlow = ctx.glow(searchWrap, 6)
     local search = ctx.new("TextBox", {Name = "Search", Position = UDim2.fromOffset(27, 0),
-        Size = UDim2.new(1, -33, 1, 0), PlaceholderText = "Search controls", Text = "", BackgroundTransparency = 1,
-        ClearTextOnFocus = false, Font = Enum.Font.GothamMedium, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left,
+        Size = UDim2.new(1, -33, 1, 0), PlaceholderText = "SEARCH", Text = "", BackgroundTransparency = 1,
+        ClearTextOnFocus = false, Font = ctx.fontMono, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left,
         ZIndex = 9}, searchWrap)
     ctx.bind(search, "TextColor3", "Primary"); ctx.bind(search, "PlaceholderColor3", "Primary")
     ctx.connect(search.Focused, function() searchGlow:SetActive(true) end)
@@ -777,13 +775,30 @@ function Library:CreateWindow(rawOptions)
         for _, tab in ipairs(state.tabs) do queueReflow(tab) end
     end)
     state.collapsed = options.SidebarCollapsed == true or UIS.TouchEnabled
-    local sideWidth = state.collapsed and 44 or 145
+    local sideWidth = state.collapsed and 44 or 112
     local sidebar = ctx.new("Frame", {Name = "Sidebar", Position = UDim2.fromOffset(0, 38),
         Size = UDim2.new(0, sideWidth, 1, -58), ZIndex = 6}, canvas)
     ctx.bind(sidebar, "BackgroundColor3", function(t) return t.Base:Lerp(t.Primary, .025) end)
     state.sidebar = sidebar
+    ctx.round(sidebar, 10)
+    ctx.glow(sidebar, 10, .88):SetActive(true, false)
+    local sideRule = ctx.new("Frame", {Name = "SideRule", Position = UDim2.new(1, -1, 0, 0),
+        Size = UDim2.new(0, 1, 1, 0), BackgroundTransparency = .75, ZIndex = 7}, sidebar)
+    ctx.bind(sideRule, "BackgroundColor3", "Primary")
+    local indexLabel = ctx.text(sidebar, "INDEX / 01", {Position = UDim2.fromOffset(39, 4),
+        Size = UDim2.new(1, -43, 0, 25), Font = ctx.fontMono, TextSize = 8,
+        TextTransparency = .45, Visible = not state.collapsed, ZIndex = 7})
+    local registration = ctx.new("Frame", {Name = "RegistrationStripes", BackgroundTransparency = 1,
+        Position = UDim2.new(0, 10, 1, -38), Size = UDim2.new(1, -20, 0, 18), ClipsDescendants = true, ZIndex = 7}, sidebar)
+    for i = 0, 8 do
+        local stripe = ctx.new("Frame", {Position = UDim2.fromOffset(i * 12, -3),
+            Size = UDim2.fromOffset(4, 24), Rotation = 40, BackgroundTransparency = .3, ZIndex = 7}, registration)
+        ctx.bind(stripe, "BackgroundColor3", "Primary")
+    end
+    ctx.text(sidebar, "E C L", {Position = UDim2.new(0, 10, 1, -18), Size = UDim2.new(1, -20, 0, 12),
+        Font = ctx.fontMono, TextSize = 8, TextTransparency = .55, ZIndex = 7})
     local nav = ctx.new("ScrollingFrame", {Name = "Tabs", Position = UDim2.fromOffset(5, 34),
-        Size = UDim2.new(1, -10, 1, -42), BackgroundTransparency = 1, ScrollBarThickness = 1,
+        Size = UDim2.new(1, -10, 1, -80), BackgroundTransparency = 1, ScrollBarThickness = 1,
         AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ScrollingDirection = Enum.ScrollingDirection.Y,
         ZIndex = 7}, sidebar)
     ctx.bind(nav, "ScrollBarImageColor3", "Accent")
@@ -794,9 +809,21 @@ function Library:CreateWindow(rawOptions)
     local footer = ctx.new("Frame", {Name = "Telemetry", Position = UDim2.new(0, 0, 1, -20),
         Size = UDim2.new(1, 0, 0, 20), ZIndex = 7}, canvas)
     ctx.bind(footer, "BackgroundColor3", function(t) return t.Base:Lerp(t.Primary, .02) end)
+    local footerRule = ctx.new("Frame", {Name = "FooterRule", Size = UDim2.new(1, 0, 0, 1),
+        BackgroundTransparency = .6, ZIndex = 8}, footer)
+    ctx.bind(footerRule, "BackgroundColor3", "Primary")
+    local barcode = ctx.new("Frame", {Name = "Barcode", Position = UDim2.fromOffset(105, 6),
+        Size = UDim2.fromOffset(56, 8), BackgroundTransparency = 1, ZIndex = 8}, footer)
+    local barcodeX = 0
+    for i = 1, 16 do
+        local width = i % 3 == 0 and 3 or 1
+        local bar = ctx.new("Frame", {Position = UDim2.fromOffset(barcodeX, 0), Size = UDim2.fromOffset(width, 8),
+            BackgroundTransparency = .35, ZIndex = 8}, barcode)
+        ctx.bind(bar, "BackgroundColor3", "Primary"); barcodeX += width + 2
+    end
     local dot = ctx.new("Frame", {Position = UDim2.fromOffset(10, 8), Size = UDim2.fromOffset(4, 4), ZIndex = 8}, footer)
     ctx.bind(dot, "BackgroundColor3", "Accent"); ctx.round(dot, 2)
-    ctx.text(footer, "SYS.ONLINE", {Position = UDim2.fromOffset(20, 0), Size = UDim2.fromOffset(100, 20),
+    ctx.text(footer, "ECL / 01", {Position = UDim2.fromOffset(20, 0), Size = UDim2.fromOffset(100, 20),
         Font = ctx.fontMono, TextSize = 8, TextTransparency = .22, ZIndex = 8})
     local telemetry = ctx.text(footer, "ECLIPSE / READY", {AnchorPoint = Vector2.new(1, 0),
         Position = UDim2.new(1, -10, 0, 0), Size = UDim2.fromOffset(250, 20), Font = ctx.fontMono,
@@ -828,10 +855,10 @@ function Library:CreateWindow(rawOptions)
         local size = viewport()
         if size.X <= 0 or size.Y <= 0 then return end
         if reset then
-            root.Position = UDim2.fromOffset(math.max(0, math.floor((size.X - 660) / 2)), math.max(0, math.floor((size.Y - 420) / 2)))
+            root.Position = UDim2.fromOffset(math.max(0, math.floor((size.X - 520) / 2)), math.max(0, math.floor((size.Y - 320) / 2)))
         else
-            root.Position = UDim2.fromOffset(math.clamp(root.Position.X.Offset, math.min(0, size.X - 660), math.max(0, size.X - 44)),
-                math.clamp(root.Position.Y.Offset, math.min(0, size.Y - 420), math.max(0, size.Y - 38)))
+            root.Position = UDim2.fromOffset(math.clamp(root.Position.X.Offset, math.min(0, size.X - 520), math.max(0, size.X - 44)),
+                math.clamp(root.Position.Y.Offset, math.min(0, size.Y - 320), math.max(0, size.Y - 38)))
         end
     end
     local floating = ctx.new("TextButton", {Name = "Reopen", Text = tostring(options.ShowText or "ECLIPSE"),
@@ -891,7 +918,8 @@ function Library:CreateWindow(rawOptions)
     ctx.vectorIcon(collapse, "sidebar", {Position = UDim2.fromOffset(5, 5), Size = UDim2.fromOffset(16, 16), ZIndex = 8})
     function window:SetSidebarCollapsed(value)
         state.collapsed = value == true; closePopup()
-        local width = state.collapsed and 44 or 145
+        indexLabel.Visible = not state.collapsed
+        local width = state.collapsed and 44 or 112
         ctx.tween(sidebar, {Size = UDim2.new(0, width, 1, -58)}, .18)
         ctx.tween(content, {Position = UDim2.fromOffset(width, 38), Size = UDim2.new(1, -width, 1, -58)}, .18)
         for _, tab in ipairs(state.tabs) do tab.NavLabel.Visible = not state.collapsed; queueReflow(tab) end
@@ -907,18 +935,27 @@ function Library:CreateWindow(rawOptions)
         for _, tab in ipairs(state.tabs) do
             local active = tab == selected
             tab.Page.Visible = active; tab.Indicator.Visible = active; tab.Glow:SetActive(active)
-            ctx.bind(tab.Button, "BackgroundColor3", function(t) return active and t.Base:Lerp(t.Accent, .14) or t.Base:Lerp(t.Primary, .035) end)
+            ctx.bind(tab.Button, "BackgroundColor3", function(t) return active and t.Primary or t.Base:Lerp(t.Primary, .035) end, true)
+            ctx.bind(tab.NavLabel, "TextColor3", active and "Base" or "Primary", true)
+            ctx.bind(tab.Indicator, "BackgroundColor3", "Base")
+            if tab.Icon:IsA("ImageLabel") then
+                ctx.bind(tab.Icon, "ImageColor3", active and "Base" or "Primary")
+            else
+                for _, part in ipairs(tab.Icon:GetDescendants()) do
+                    if part:IsA("Frame") then ctx.bind(part, "BackgroundColor3", active and "Base" or "Primary")
+                    elseif part:IsA("UIStroke") then ctx.bind(part, "Color", active and "Base" or "Primary") end
+                end
+            end
             tab.NavLabel.TextTransparency = active and 0 or .4
         end
         selected.Page.CanvasPosition = Vector2.zero; reflow(selected)
-        if canvas.Visible and not state.minimized then ctx.digitalSlice(content) end
         for index, section in ipairs(selected.Sections) do
             if section.Frame.Visible then
-                section.Frame.Position = section.RestPosition + UDim2.fromOffset(0, 10)
+                section.Frame.Position = section.RestPosition + UDim2.fromOffset(0, 4)
                 section.Header.TextTransparency = .85
                 ctx.delay(math.min(.1, (index - 1) * .018), function()
                     if generation ~= state.revealGeneration or not section.Frame.Parent then return end
-                    ctx.spring(section.Frame, {Position = section.RestPosition}, .23)
+                    ctx.tween(section.Frame, {Position = section.RestPosition}, .18)
                     ctx.tween(section.Header, {TextTransparency = 0}, .18)
                 end)
             end
@@ -933,7 +970,7 @@ function Library:CreateWindow(rawOptions)
             CanvasSize = UDim2.new(), ScrollBarThickness = 2, ScrollingDirection = Enum.ScrollingDirection.Y,
             Visible = false, ZIndex = 3}, content)
         ctx.bind(page, "ScrollBarImageColor3", "Accent"); tab.Page = page
-        for _, columnName in ipairs({"LeftColumn", "RightColumn"}) do
+        for _, columnName in ipairs({"ContentStack"}) do
             table.insert(tab.Columns, ctx.new("Frame", {Name = columnName, BackgroundTransparency = 1, Size = UDim2.fromOffset(0, 0), ZIndex = 3}, page))
         end
         tab.Empty = ctx.text(page, "No matching controls", {Position = UDim2.fromOffset(12, 12),
@@ -941,20 +978,22 @@ function Library:CreateWindow(rawOptions)
         local button = ctx.new("TextButton", {Name = name, Text = "", AutoButtonColor = false,
             Size = UDim2.new(1, 0, 0, 32), LayoutOrder = #state.tabs + 1, ZIndex = 7}, nav)
         ctx.bind(button, "BackgroundColor3", function(t) return t.Base:Lerp(t.Primary, .035) end)
-        ctx.round(button, 5); tab.Button = button
+        ctx.round(button, 8); tab.Button = button
         local asset = tabOptions.Icon ~= 4483362458 and ctx.iconAsset(tabOptions.Icon) or nil
         if asset then
             local iconImage = ctx.new("ImageLabel", {BackgroundTransparency = 1, Image = asset,
                 Position = UDim2.fromOffset(9, 8), Size = UDim2.fromOffset(16, 16), ZIndex = 8}, button)
-            ctx.bind(iconImage, "ImageColor3", "Primary")
-        else ctx.vectorIcon(button, type(tabOptions.Icon) == "string" and tabOptions.Icon or name,
+            ctx.bind(iconImage, "ImageColor3", "Primary"); tab.Icon = iconImage
+        else tab.Icon = ctx.vectorIcon(button, type(tabOptions.Icon) == "string" and tabOptions.Icon or name,
             {Position = UDim2.fromOffset(9, 8), Size = UDim2.fromOffset(16, 16), ZIndex = 8}) end
         tab.NavLabel = ctx.text(button, name, {Position = UDim2.fromOffset(35, 0), Size = UDim2.new(1, -41, 1, 0),
-            TextSize = 11, TextTruncate = Enum.TextTruncate.AtEnd, Visible = not state.collapsed, ZIndex = 8})
+            Font = Enum.Font.GothamMedium, TextSize = 11, TextTruncate = Enum.TextTruncate.AtEnd, Visible = not state.collapsed, ZIndex = 8})
         tab.Indicator = ctx.new("Frame", {Name = "ActiveIndicator", Size = UDim2.fromOffset(2, 18),
             Position = UDim2.new(0, 0, .5, -9), Visible = false, ZIndex = 8}, button)
         ctx.bind(tab.Indicator, "BackgroundColor3", "Accent"); ctx.round(tab.Indicator, 1)
-        tab.Glow = ctx.glow(tab.Indicator, 2)
+        tab.Glow = ctx.glow(button, 8, .72)
+        ctx.connect(button.MouseEnter, function() tab.Glow:SetActive(true) end)
+        ctx.connect(button.MouseLeave, function() tab.Glow:SetActive(state.activeTab == tab) end)
         table.insert(state.tabs, tab)
         ctx.connect(button.Activated, function() window:SelectTab(tab) end)
         ctx.connect(page:GetPropertyChangedSignal("AbsoluteSize"), function() queueReflow(tab) end)
@@ -964,7 +1003,7 @@ function Library:CreateWindow(rawOptions)
     end
     local dragStart, rootStart
     local dragHandle = ctx.new("Frame", {Name = "DragTitle", BackgroundTransparency = 1,
-        Size = UDim2.fromOffset(416, 38), Active = true, ZIndex = 10}, header)
+        Size = UDim2.new(1, -214, 0, 38), Active = true, ZIndex = 10}, header)
     ctx.drag(dragHandle, function(position)
         if not dragStart then dragStart = position; rootStart = root.AbsolutePosition end
         root.Position = UDim2.fromOffset(rootStart.X + position.X - dragStart.X, rootStart.Y + position.Y - dragStart.Y)
@@ -979,22 +1018,23 @@ function Library:CreateWindow(rawOptions)
     place(true)
     local boot = ctx.new("Frame", {Name = "Boot", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 3}, root)
     state.bootAtmosphere = ctx.createAtmosphere(boot, {Mode = "boot", Running = true, Center = Vector2.new(.5, .34), HollowCenter = true, ZIndex = 3})
-    local bootLogo = logo(boot, image, UDim2.new(.5, -20, 0, 82), UDim2.fromOffset(40, 98))
+    local bootLogo = logo(boot, image, UDim2.new(.5, -48, 0, 48), UDim2.fromOffset(96, 96))
     bootLogo.ZIndex = 5
-    local bootTitle = ctx.text(boot, options.LoadingTitle or "ECLIPSE", {Position = UDim2.fromOffset(30, 220),
+    local bootTitle = ctx.text(boot, options.LoadingTitle or "ECLIPSE", {Position = UDim2.fromOffset(30, 164),
         Size = UDim2.new(1, -60, 0, 26), TextXAlignment = Enum.TextXAlignment.Center,
         Font = Enum.Font.GothamBold, TextSize = 18, ZIndex = 5})
-    ctx.text(boot, options.LoadingSubtitle or "CONTROL INTERFACE", {Position = UDim2.fromOffset(30, 251),
+    ctx.text(boot, options.LoadingSubtitle or "CONTROL INTERFACE", {Position = UDim2.fromOffset(30, 197),
         Size = UDim2.new(1, -60, 0, 16), Font = ctx.fontMono, TextSize = 10, TextTransparency = .45,
         TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 5})
-    local track = ctx.new("Frame", {Position = UDim2.new(.5, -125, 0, 292), Size = UDim2.fromOffset(250, 4), ZIndex = 5}, boot)
+    local track = ctx.new("Frame", {Position = UDim2.new(.5, -125, 0, 234), Size = UDim2.fromOffset(250, 4), ZIndex = 5}, boot)
     ctx.bind(track, "BackgroundColor3", function(t) return t.Base:Lerp(t.Primary, .08) end); ctx.round(track, 2)
     local progress = ctx.new("Frame", {Size = UDim2.fromScale(0, 1), ZIndex = 6}, track)
     ctx.bind(progress, "BackgroundColor3", "Accent"); ctx.round(progress, 2); ctx.glow(progress, 2):SetActive(true, false)
-    local bootStatus = ctx.text(boot, "INITIALIZING INTERFACE  00%", {Position = UDim2.new(.5, -125, 0, 309),
+    local bootStatus = ctx.text(boot, "INITIALIZING INTERFACE  00%", {Position = UDim2.new(.5, -125, 0, 248),
         Size = UDim2.fromOffset(250, 18), Font = ctx.fontMono, TextSize = 9, TextTransparency = .35, ZIndex = 5})
+    local pulseTarget = bootLogo
     local pulseProperty = bootLogo:IsA("ImageLabel") and "ImageTransparency" or "TextTransparency"
-    local pulse = TweenService:Create(bootLogo, TweenInfo.new(.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {[pulseProperty] = .45})
+    local pulse = TweenService:Create(pulseTarget, TweenInfo.new(.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {[pulseProperty] = .45})
     pulse:Play(); state.bootPulse = pulse
     ctx.spawn(function()
         scramble(bootTitle, options.LoadingTitle or "ECLIPSE")
