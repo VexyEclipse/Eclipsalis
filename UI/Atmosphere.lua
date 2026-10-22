@@ -1,7 +1,79 @@
 -- Bounded procedural ASCII decoration. Installed before controls in the standalone build.
 return function(Library, ctx)
     local RunService = game:GetService("RunService")
-    local glyphs = {"0", "1", "0", "1", ".", ":", "|"}
+    -- Each theme animates the same glyph grid differently: its own characters and its own motion.
+    local effects = {
+        ["Absolute Dark"] = {Glyphs = {"0", "1", "0", "1", ".", ":", "|"}, Motion = "rain"},
+        Charcoal = {Glyphs = {".", "'", ".", "+"}, Motion = "twinkle"},
+        ["Matrix Green"] = {Glyphs = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"}, Motion = "rain", Speed = 1.6, Trail = .5},
+        ["Crimson Eclipse"] = {Glyphs = {"+", "x", ".", "*", "o"}, Motion = "radial"},
+        Void = {Glyphs = {"*", ".", "+", ".", "o"}, Motion = "stars"},
+        Monochrome = {Glyphs = {"/", "\\", "|", "-"}, Motion = "sweep"},
+        Sakura = {Glyphs = {"*", "~", ".", "'"}, Motion = "rain", Speed = .55, Trail = .14},
+        Synthwave = {Glyphs = {"=", "-", "_", "="}, Motion = "rise"},
+        Frost = {Glyphs = {"*", "+", ".", "*"}, Motion = "snow"},
+        CyberYellow = {Glyphs = {"0", "1", "A", "F", "#", "/", "_"}, Motion = "glitch"},
+        AmberGlow = {Glyphs = {">", "_", "$", "#", ":", "."}, Motion = "type"},
+        NeonCyan = {Glyphs = {"~", "-", "^", "~"}, Motion = "wave"},
+        Light = {Glyphs = {".", "'", "."}, Motion = "twinkle"},
+    }
+    local function effect()
+        return effects[ctx.effectName and ctx.effectName() or ""] or effects["Absolute Dark"]
+    end
+    -- Cheap deterministic per-cell noise in [0, 1).
+    local function hash(a, b, c)
+        local value = math.sin(a * 12.9898 + b * 78.233 + c * 37.719) * 43758.5453
+        return value - math.floor(value)
+    end
+    local function motion(profile, handle, cell, elapsed, now)
+        local speed, kind = profile.Speed or 1, profile.Motion
+        if kind == "twinkle" or kind == "stars" then
+            -- Sparse independent sparkles; stars pulse slower, brighter and rarer.
+            local stars = kind == "stars"
+            local rate = (stars and .4 or .8) + hash(cell.Column, cell.Row, 1) * (stars and .8 or 1.6)
+            local pulse = math.sin(now * rate * speed + hash(cell.Row, cell.Column, 2) * 6.28)
+            local threshold = stars and .75 or .55
+            return math.max(0, pulse - threshold) / (1 - threshold) * (stars and .95 or .55)
+        elseif kind == "radial" then
+            -- Eclipse rings expanding from the centre.
+            local dx, dy = (cell.X - .5) * 1.6, cell.Y - .5
+            local band = (math.sqrt(dx * dx + dy * dy) - (elapsed * .16 * speed) % 1) % 1
+            return math.max(0, 1 - band / .14) * .8
+        elseif kind == "sweep" then
+            -- A diagonal light bar crossing the grid.
+            local head = (elapsed * .22 * speed) % 1.6 - .3
+            return math.max(0, 1 - math.abs((cell.X + cell.Y) / 2 - head) / .1) * .8
+        elseif kind == "rise" then
+            -- Horizontal scan bands climbing upward.
+            local head = 1 - (elapsed * .18 * speed) % 1
+            return math.max(0, 1 - ((cell.Y - head) % 1) / .22) * .75
+        elseif kind == "glitch" then
+            -- Random cell bursts plus the occasional corrupted row.
+            local tick = math.floor(now * 6 * speed)
+            local burst = hash(cell.Column, cell.Row, tick) > .93 and .9 or 0
+            local row = (tick * 7 + cell.Row) % 29 == 0 and .55 or 0
+            return math.max(burst, row)
+        elseif kind == "type" then
+            -- A terminal cursor typing across rows, leaving a fading line behind it.
+            local index = (cell.Row - 1) * handle.Columns + cell.Column
+            local head = (elapsed * 14 * speed) % (handle.CellCount + handle.Columns * 2)
+            local behind = head - index
+            return behind >= 0 and math.max(0, 1 - behind / (handle.Columns * 1.5)) * .8 or 0
+        elseif kind == "wave" then
+            -- Two neon sine waves gliding across.
+            local first = .5 + .28 * math.sin(cell.X * 9.4 + elapsed * 1.5 * speed)
+            local second = .5 + .22 * math.sin(cell.X * 6.3 - elapsed * 1.1 * speed + 2)
+            return math.max(0, 1 - math.min(math.abs(cell.Y - first), math.abs(cell.Y - second)) / .09) * .8
+        elseif kind == "snow" then
+            -- Slow falling flakes with a gentle sideways sway in timing.
+            local travel = (elapsed * (.05 + (cell.Column % 4) * .012) * speed
+                + cell.Column * .371 + math.sin(elapsed * .7 + cell.Column) * .02) % 1
+            return math.max(0, 1 - ((travel - cell.Y) % 1) / .12) * .7
+        end
+        -- Rain: falling columns with a fading trail.
+        local travel = (elapsed * (.12 + (cell.Column % 5) * .018) * speed + cell.Column * .371) % 1
+        return math.max(0, 1 - ((travel - cell.Y) % 1) / (profile.Trail or .38)) * .75
+    end
     local handles, slices = {}, {}
     local connection, accumulated, disposed = nil, 0, false
     local interval, rippleLifetime = 1 / 18, 1.2
@@ -46,6 +118,8 @@ return function(Library, ctx)
             if now - ripples[index].Time > rippleLifetime then table.remove(ripples, index) end
         end
         local isBoot, isWatermark = handle.Mode == "boot", handle.Mode == "watermark"
+        local profile = effect()
+        local glyphs = profile.Glyphs
         for _, cell in ipairs(handle.Cells) do
             local x, y = cell.X * width, cell.Y * height
             local wave = math.sin(now * 0.72 + cell.Column * 0.31 + cell.Row * 0.44)
@@ -66,9 +140,7 @@ return function(Library, ctx)
             elseif isWatermark then
                 energy = math.max(0, math.sin(now * 1.3 - cell.Column * 0.42)) * 0.13
             else
-                local travel = (elapsed * (.12 + (cell.Column % 5) * .018) + cell.Column * .371) % 1
-                local trail = (travel - cell.Y) % 1
-                energy = math.max(0, 1 - trail / .38) * .75
+                energy = motion(profile, handle, cell, elapsed, now)
             end
             for _, ripple in ipairs(ripples) do
                 local age = now - ripple.Time

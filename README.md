@@ -1,6 +1,6 @@
 # Eclipse UI
 
-A polished, compact Roblox interface for Eclipse. Version **1.6.2** uses near-black Absolute Dark surfaces, restrained blue active states, rounded switches and the original white flame logo. Built directly with Roblox GUI objects, with no external UI dependency.
+A polished, compact Roblox interface for Eclipse. Version **1.6.3** uses near-black Absolute Dark surfaces, restrained blue active states, rounded switches and the original white flame logo. Built directly with Roblox GUI objects, with no external UI dependency.
 
 ```lua
 local Eclipse = loadstring(game:HttpGet("https://raw.githubusercontent.com/VexyEclipse/Eclipsalis/main/EclipseUI.lua"))()
@@ -150,3 +150,22 @@ v1.6.0 layout and polish pass: row labels wrap onto a second line and grow the r
 v1.6.1: the Matrix look is back by default: the ambient glyph field behind the cards and the glyph block on buttons, alongside the v1.6.0 layout and control polish. `Matrix = false` in `CreateWindow` keeps the plain wash and arrow buttons. Absolute Dark is now the default theme; `Theme = "Default"` (and the old aliases) resolve to it, and the previous charcoal palette is available as `"Charcoal"`. Sidebar icons are redrawn with rounded strokes and curves: house, eye, lightning bolt (farms) and gear, plus player, teleport pin, combat sword, info and misc icons matched by keyword in the tab name (for example "Auto Farms" or "Player ESP"); other tabs get a four-tile grid.
 
 v1.6.2: sidebar and header icons use [Lucide](https://lucide.dev) (v0.460.0, ISC license) geometry: house, eye, zap, settings, user, map-pin, swords, info, ellipsis, layout-grid, search, panel-left and keyboard. `tools/lucide_icons.py` downloads the SVGs and flattens them into `UI/Icons.lua`, so icons stay theme-colored vector strokes with no image uploads. Tabs are matched by keyword ("Auto Farms" gets zap, "Player ESP" gets eye), and a tab's `Icon` may name one of these directly. The top bar now uses the theme's Sidebar surface instead of Base, so it visibly changes with the theme; its top corners are rounded to the window and it meets the sidebar without notches. Theme changes now also recolor the corner brackets and their glow (the glow keeps its falloff transparency), plus any other part only the UI tree referenced: theme bindings no longer sit in a weak table, where Roblox could drop an on-screen Instance's entry.
+
+v1.6.3: seven new presets, each passing 4.5:1 contrast for primary and secondary text on every surface: Matrix Green, Crimson Eclipse, Void, Monochrome, Sakura, Synthwave and Frost (`MatrixGreen` and `CrimsonEclipse` also work). Every theme now has its own glyph effect on the background and button glyph blocks; nothing else about the themes changed:
+
+| Theme | Glyphs | Motion |
+| --- | --- | --- |
+| Absolute Dark | `0 1 . : \|` | Falling rain (unchanged) |
+| Charcoal, Light | `. ' +` | Soft twinkle |
+| Matrix Green | hex `0–F` | Fast rain with long trails |
+| Crimson Eclipse | `+ x * o` | Rings expanding from the centre |
+| Void | `* . + o` | Slow, bright starfield |
+| Monochrome | `/ \ \| -` | Diagonal light sweep |
+| Sakura | `* ~ . '` | Slow drifting petals |
+| Synthwave | `= - _` | Scan bands rising |
+| Frost | `* + .` | Snowfall |
+| CyberYellow | `0 1 A F # / _` | Glitch bursts and corrupted rows |
+| AmberGlow | `> _ $ # :` | Terminal cursor typing across rows |
+| NeonCyan | `~ - ^` | Two gliding sine waves |
+
+Custom theme tables may set `Effect` to any of these names.

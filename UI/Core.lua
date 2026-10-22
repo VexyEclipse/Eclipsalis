@@ -4,7 +4,7 @@ local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
-local Library = {Flags = {}, Version = "1.6.2", Name = "Eclipse UI"}
+local Library = {Flags = {}, Version = "1.6.3", Name = "Eclipse UI"}
 local Tab = {}
 Tab.__index = Tab
 local WINDOW_WIDTH, WINDOW_HEIGHT = 660, 420
@@ -35,7 +35,8 @@ local function resolveTheme(theme)
     end
     return result
 end
-Library.ThemeNames = {"Absolute Dark", "Charcoal", "CyberYellow", "AmberGlow", "NeonCyan", "Light"}
+Library.ThemeNames = {"Absolute Dark", "Charcoal", "Matrix Green", "Crimson Eclipse", "Void", "Monochrome", "Sakura",
+    "Synthwave", "Frost", "CyberYellow", "AmberGlow", "NeonCyan", "Light"}
 Library.Themes = {
     Charcoal = palette("0E0F12", "E6E8EC", "3B82F6", {Sidebar="121317", Section="16181D", Hover="1D2026", Input="0B0C0F", Secondary="8A8F98", Shadow="0B0C0F"}),
     ["Absolute Dark"] = palette("020304", "E6E8EC", "3B82F6", {Sidebar="050608", Section="090B0E", Hover="11151B", Input="010203", Secondary="8A8F98", Shadow="000000"}),
@@ -43,12 +44,22 @@ Library.Themes = {
     AmberGlow = palette("191009", "FFF0DF", "FFAD42", {Sidebar="23170F", Section="302015", Hover="412D1D", Input="100A06", Secondary="C6A88A", OnAccent="191009"}),
     NeonCyan = palette("06151C", "E1F8FF", "00E5FF", {Sidebar="09212B", Section="0D2C38", Hover="123F4E", Input="031016", Secondary="8DBAC7", OnAccent="06151C"}),
     Light = palette("EDF1F7", "192332", "2563EB", {Sidebar="E2E8F1", Section="FFFFFF", Hover="DCE5F2", Input="EAF0F7", Secondary="536174", Border="192332", Shadow="101827", OnAccent="FFFFFF"}),
+    ["Matrix Green"] = palette("020603", "D7F5DD", "22C55E", {Sidebar="040A06", Section="07110A", Hover="0D1C11", Input="010402", Secondary="7FA88A", OnAccent="020603"}),
+    ["Crimson Eclipse"] = palette("0D0607", "F3E4E5", "EF4444", {Sidebar="140A0B", Section="1B0E10", Hover="2A1518", Input="080304", Secondary="A88A8D"}),
+    Void = palette("0B0912", "ECE8F5", "B57BF9", {Sidebar="110E1A", Section="171324", Hover="221C33", Input="07060C", Secondary="9189A8", OnAccent="0B0912"}),
+    Monochrome = palette("0A0A0A", "EDEDED", "FFFFFF", {Sidebar="101010", Section="161616", Hover="222222", Input="050505", Secondary="8C8C8C", OnAccent="0A0A0A"}),
+    Sakura = palette("120A0F", "F7E8EF", "F472B6", {Sidebar="1A0F16", Section="22131C", Hover="2F1A27", Input="0B0609", Secondary="B0919F", OnAccent="120A0F"}),
+    Synthwave = palette("0E0A1F", "F3E8FF", "FF4FD8", {Sidebar="140F2A", Section="1B1536", Hover="271E4A", Input="080614", Secondary="9D8FC2", OnAccent="0E0A1F"}),
+    Frost = palette("0A0F14", "E4EEF5", "7DD3FC", {Sidebar="0F161D", Section="141D26", Hover="1C2834", Input="05090C", Secondary="8A9BAA", OnAccent="0A0F14"}),
 }
 -- Absolute Dark is the default; "Default" stays a valid name for existing scripts.
 Library.Themes.Default = Library.Themes["Absolute Dark"]
 local aliases = {Eclipse = "Default", Amethyst = "Default", Bloom = "Default", Serenity = "Default",
-    AbsoluteDark = "Absolute Dark", DarkBlue = "NeonCyan", Ocean = "NeonCyan", Green = "NeonCyan"}
+    AbsoluteDark = "Absolute Dark", DarkBlue = "NeonCyan", Ocean = "NeonCyan", Green = "NeonCyan",
+    MatrixGreen = "Matrix Green", CrimsonEclipse = "Crimson Eclipse"}
 state.theme = resolveTheme(Library.Themes.Default)
+state.effect = "Absolute Dark"
+function ctx.effectName() return state.effect end
 ctx.colors = state.theme
 Library.Theme = Library.Themes
 function ctx.alive() return state.alive end
@@ -686,9 +697,15 @@ function Library:LoadConfiguration()
     return true
 end
 function Library:ModifyTheme(theme)
-    if type(theme) == "string" then theme = self.Themes[aliases[theme] or theme] end
+    -- Named presets also pick their glyph effect; custom tables may name one in `Effect`.
+    local effect = type(theme) == "table" and theme.Effect or nil
+    if type(theme) == "string" then
+        effect = aliases[theme] or theme
+        theme = self.Themes[effect]
+    end
     if type(theme) ~= "table" or typeof(theme.Base) ~= "Color3" or typeof(theme.Primary) ~= "Color3"
         or typeof(theme.Accent) ~= "Color3" then return false end
+    if effect then state.effect = effect == "Default" and "Absolute Dark" or tostring(effect) end
     -- Keep three-token custom themes compatible, with optional semantic surface overrides.
     state.theme = resolveTheme(theme)
     ctx.colors = state.theme
