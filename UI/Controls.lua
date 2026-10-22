@@ -50,16 +50,6 @@ return function(Library, ctx)
         return outline
     end
 
-    local function compactLabel(label, reservedWidth, height, y)
-        label.AutomaticSize = Enum.AutomaticSize.None
-        label.Position = UDim2.fromOffset(12, y or 0)
-        label.Size = UDim2.new(1, -reservedWidth, 0, height or 34)
-        label.TextSize = 14
-        label.TextWrapped = false
-        label.TextTruncate = Enum.TextTruncate.AtEnd
-        label.TextYAlignment = Enum.TextYAlignment.Center
-    end
-
     local function inputBox(parent, properties)
         properties = properties or {}
         properties.Font = properties.Font or ctx.font
@@ -84,17 +74,32 @@ return function(Library, ctx)
         control.Type = "Button"
         control.SurfaceRole = "Input"
         bind(row, "BackgroundColor3", "Input")
-        compactLabel(label, 56)
-        local matrix = new("Frame", {Name = "ButtonMatrix", BackgroundTransparency = 1,
-            AnchorPoint = Vector2.new(1, .5), Position = UDim2.new(1, -12, .5, 0),
-            Size = UDim2.fromOffset(24, 24), Active = false, ZIndex = label.ZIndex}, row)
-        local decoration = ctx.createAtmosphere(matrix, {Mode = "button", Columns = 3, Rows = 2,
-            GlyphSize = 8, ZIndex = label.ZIndex})
-        ctx.connect(row.Destroying, function() decoration:Destroy() end)
+        ctx.wrapLabel(control, 48)
+        label.Font = Enum.Font.GothamMedium
+        -- Buttons read as buttons: outlined surface, action arrow that turns accent on hover, press dip.
+        local outline = ctx.stroke(row, "Border", .9)
+        local arrow = ctx.vectorIcon(row, "arrow", {AnchorPoint = Vector2.new(1, .5), Position = UDim2.new(1, -12, .5, 0),
+            Size = UDim2.fromOffset(14, 14), Role = "Secondary", ZIndex = label.ZIndex})
+        local function arrowRole(role)
+            for _, part in ipairs(arrow:GetChildren()) do
+                if part:IsA("Frame") then bind(part, "BackgroundColor3", role, true) end
+            end
+        end
+        ctx.connect(row.MouseEnter, function()
+            if control.Disabled then return end
+            arrowRole("Accent"); tween(outline, {Transparency = .8}, .12)
+            tween(arrow, {Position = UDim2.new(1, -9, .5, 0)}, .15)
+        end)
+        ctx.connect(row.MouseLeave, function()
+            arrowRole("Secondary"); tween(outline, {Transparency = .9}, .12)
+            tween(arrow, {Position = UDim2.new(1, -12, .5, 0)}, .15)
+        end)
         bind(label, "TextColor3", "Primary")
-        if control.Stroke then control.Stroke.Transparency = 1 end
         ctx.connect(row.Activated, function()
-            if usable(control) then ctx.changed(control, nil, true) end
+            if not usable(control) then return end
+            outline.Transparency = .6
+            ctx.delay(.1, function() if outline.Parent then tween(outline, {Transparency = .9}, .2) end end)
+            ctx.changed(control, nil, true)
         end)
         function control.Set(first, second)
             if control.Destroyed or not ctx.alive() then return control end
@@ -117,26 +122,31 @@ return function(Library, ctx)
         control.Type = "Toggle"
         control.CurrentValue = options.CurrentValue == true
         control.value = control.CurrentValue
-        compactLabel(label, 76)
+        ctx.wrapLabel(control, 64)
         local track = new("Frame", {
             Name = "ToggleTrack", AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0),
-            Size = UDim2.fromOffset(40, 24), BorderSizePixel = 0,
+            Size = UDim2.fromOffset(40, 22), BorderSizePixel = 0,
         }, row)
-        local function trackColor(t) return control.CurrentValue and t.Accent or ctx.colors.Input end
+        -- The off track sits a step above the card with a hairline edge so it never disappears.
+        local function trackColor(t) return control.CurrentValue and t.Accent or t.Hover end
         bind(track, "BackgroundColor3", trackColor)
-        ctx.round(track, 12)
+        ctx.round(track, 11)
+        local trackEdge = ctx.stroke(track, "Border", control.CurrentValue and 1 or .88)
         local block = new("Frame", {
-            Name = "ToggleThumb", Position = UDim2.fromOffset(4, 4), Size = UDim2.fromOffset(16, 16), BorderSizePixel = 0,
+            Name = "ToggleThumb", AnchorPoint = Vector2.new(0, .5), Position = UDim2.new(0, 4, .5, 0),
+            Size = UDim2.fromOffset(14, 14), BorderSizePixel = 0,
         }, track)
-        local function thumbColor(t) return control.CurrentValue and t.OnAccent or t.Primary end
+        local function thumbColor(t) return control.CurrentValue and t.OnAccent or t.Secondary end
         bind(block, "BackgroundColor3", thumbColor)
         ctx.round(block, 8)
         local function render(animate)
             local enabled = control.CurrentValue
             bind(block, "BackgroundColor3", thumbColor, animate)
-            local duration = animate and 0.15 or 0
-            ctx.spring(block, {Position = UDim2.fromOffset(enabled and 20 or 4, 4)}, duration)
+            local duration = animate and 0.18 or 0
+            ctx.tween(block, {Position = UDim2.new(0, enabled and 21 or 4, .5, 0),
+                Size = UDim2.fromOffset(enabled and 16 or 14, enabled and 16 or 14)}, duration, Enum.EasingStyle.Back)
             tween(track, {BackgroundColor3 = trackColor(ctx.theme())}, animate and 0.15 or 0)
+            tween(trackEdge, {Transparency = enabled and 1 or .88}, animate and 0.15 or 0)
         end
         local function set(value, skipCallback)
             if control.Destroyed or not ctx.alive() then return control end
@@ -182,30 +192,51 @@ return function(Library, ctx)
         end
         control.CurrentValue = snap(options.CurrentValue) or minimum
         control.value = control.CurrentValue
-        local valueWidth = 64
-        compactLabel(label, valueWidth + 36, 16, 0)
+        -- Label and exact value share the top line; a full-width track runs underneath.
+        local valueWidth = 104
+        label.AutomaticSize = Enum.AutomaticSize.Y
+        label.Position = UDim2.fromOffset(12, 8)
+        label.Size = UDim2.new(1, -(valueWidth + 28), 0, 0)
+        label.TextWrapped = true
+        label.TextTruncate = Enum.TextTruncate.None
+        label.TextYAlignment = Enum.TextYAlignment.Top
         local field = new("Frame", {
-            Name = "ValueBadge", ClipsDescendants = true, AnchorPoint = Vector2.new(1, .5), Position = UDim2.new(1, -12, .5, 0),
-            Size = UDim2.fromOffset(valueWidth, 28), BorderSizePixel = 0,
+            Name = "ValueBadge", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8, 0, 5),
+            Size = UDim2.fromOffset(valueWidth, 22), BackgroundTransparency = 1, BorderSizePixel = 0,
         }, row)
+        new("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right,
+            VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder}, field)
+        new("UIPadding", {PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 4)}, field)
         local focused = false
         local function fieldColor() return ctx.colors.Input end
         bind(field, "BackgroundColor3", fieldColor)
         ctx.round(field, 6)
         local focusedStroke = border(field)
         local valueBox = inputBox(field, {
-            Name = "ExactValue", Font = mono, Position = UDim2.fromOffset(4, 0), Size = UDim2.new(1, -8, 0, suffix == "" and 28 or 16), Text = "",
-            TextXAlignment = Enum.TextXAlignment.Center,
+            Name = "ExactValue", Font = mono, Size = UDim2.fromOffset(0, 22), AutomaticSize = Enum.AutomaticSize.X,
+            Text = "", TextSize = 13, TextXAlignment = Enum.TextXAlignment.Right, LayoutOrder = 1,
         })
+        valueBox.ClipsDescendants = false
+        valueBox.TextTruncate = Enum.TextTruncate.None
+        new("UISizeConstraint", {MinSize = Vector2.new(12, 0), MaxSize = Vector2.new(valueWidth - 8, math.huge)}, valueBox)
         if suffix ~= "" then
-            local unit = text(field, suffix, {Position = UDim2.fromOffset(0, 16), Size = UDim2.new(1, 0, 0, 12),
-                Font = ctx.font, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Center})
+            local unit = text(field, suffix, {Size = UDim2.fromOffset(0, 22), AutomaticSize = Enum.AutomaticSize.X,
+                Font = ctx.font, TextSize = 12, LayoutOrder = 2})
             bind(unit, "TextColor3", "Secondary")
         end
         local hit = new("TextButton", {
-            Name = "SliderDrag", Position = UDim2.fromOffset(12, 16), Size = UDim2.new(1, -100, 0, 16), Text = "", BackgroundTransparency = 1,
+            Name = "SliderDrag", Position = UDim2.fromOffset(12, 28), Size = UDim2.new(1, -24, 0, 14), Text = "", BackgroundTransparency = 1,
             BorderSizePixel = 0, AutoButtonColor = false, Active = true,
         }, row)
+        local function layout()
+            if control.Destroyed or not label.Parent then return end
+            local labelHeight = math.max(16, math.ceil(ctx.unscale(label.AbsoluteSize.Y)))
+            hit.Position = UDim2.fromOffset(12, 8 + labelHeight + 4)
+            local height = labelHeight + 34
+            if row.Size.Y.Offset ~= height then row.Size = UDim2.new(1, 0, 0, height) end
+        end
+        ctx.connect(label:GetPropertyChangedSignal("AbsoluteSize"), layout)
+        ctx.delay(0, layout)
         local track = new("Frame", {
             Name = "Track",
             AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 0, 0.5, 0),
@@ -271,13 +302,13 @@ return function(Library, ctx)
             if not usable(control) then valueBox:ReleaseFocus(); return end
             focused = true
             valueBox.Text = numberText(control.CurrentValue)
-            tween(field, {BackgroundColor3 = fieldColor(ctx.theme())}, 0.12)
+            tween(field, {BackgroundTransparency = 0}, 0.12)
             tween(focusedStroke, {Transparency = 0.35}, 0.12)
         end)
         ctx.connect(valueBox.FocusLost, function()
             if control.Destroyed or not ctx.alive() then return end
             focused = false
-            tween(field, {BackgroundColor3 = fieldColor(ctx.theme())}, 0.14)
+            tween(field, {BackgroundTransparency = 1}, 0.14)
             tween(focusedStroke, {Transparency = 1}, 0.14)
             if not usable(control) then return end
             set(valueBox.Text, false, true)
@@ -293,7 +324,7 @@ return function(Library, ctx)
         local control, row, label = ctx.row(self, options, 34)
         control.Type = "Input"
         local numeric = options.Numeric == true or options.NumbersOnly == true
-        compactLabel(label, 100, 34)
+        ctx.wrapLabel(control, 88)
         local field = new("Frame", {
             Name = "InputField", ClipsDescendants = true, AnchorPoint = Vector2.new(1, .5), Position = UDim2.new(1, -12, .5, 0),
             Size = UDim2.fromOffset(64, 28), BorderSizePixel = 0,

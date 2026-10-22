@@ -52,14 +52,7 @@ return function(Library, ctx)
     end
 
     local function trigger(control, width)
-        control.Frame.Size = UDim2.new(1, 0, 0, 34)
-        control.Label.Size = UDim2.new(1, -(width + 36), 1, 0)
-        control.Label.Position = UDim2.fromOffset(12, 0)
-        control.Label.AutomaticSize = Enum.AutomaticSize.None
-        control.Label.TextWrapped = false
-        control.Label.TextTruncate = Enum.TextTruncate.AtEnd
-        control.Label.TextYAlignment = Enum.TextYAlignment.Center
-        control.Label.TextSize = 14
+        ctx.wrapLabel(control, width + 32)
         local button = ctx.new("TextButton", {
             Name = "Control", AnchorPoint = Vector2.new(1, .5), Position = UDim2.new(1, -12, .5, 0),
             Size = UDim2.fromOffset(width, 28), BackgroundTransparency = 0,

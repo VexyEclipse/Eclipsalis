@@ -4,7 +4,7 @@ local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
-local Library = {Flags = {}, Version = "1.5.0", Name = "Eclipse UI"}
+local Library = {Flags = {}, Version = "1.6.0", Name = "Eclipse UI"}
 local Tab = {}
 Tab.__index = Tab
 local WINDOW_WIDTH, WINDOW_HEIGHT = 660, 420
@@ -423,7 +423,7 @@ local function reflow(tab)
             local column = state.compact and 1 or section.Column
             section.Frame.Parent = tab.Columns[column]
             -- Rows own logical pixel heights; do not depend on UIScale layout measurements.
-            local height = math.max(64, bodyHeight + 64)
+            local height = math.max(60, bodyHeight + 60)
             section.RestPosition = UDim2.fromOffset(0, heights[column])
             section.Frame.Position = section.RestPosition
             section.Frame.Size = UDim2.fromOffset(cardWidth, height)
@@ -445,16 +445,17 @@ local function makeSection(tab, name, explicit)
     local frame = ctx.new("CanvasGroup", {Name = "Section", BackgroundTransparency = 0,
         Size = UDim2.fromOffset(240, 34), ClipsDescendants = false, ZIndex = 3}, tab.Columns[column])
     ctx.bind(frame, "BackgroundColor3", "Section")
-    ctx.round(frame, 8); ctx.stroke(frame, "Border", .94)
-    local header = ctx.text(frame, sectionCaption(name), {Position = UDim2.fromOffset(16, 16),
-        Size = UDim2.new(1, -32, 0, 16), Font = Enum.Font.GothamMedium, TextSize = 13,
+    ctx.round(frame, 8); ctx.stroke(frame, "Border", .92)
+    -- Header, rule and row content share one 16px inset; rows sit 4px in so their hover fill has room.
+    local header = ctx.text(frame, sectionCaption(name), {Position = UDim2.fromOffset(16, 14),
+        Size = UDim2.new(1, -32, 0, 16), Font = Enum.Font.GothamBold, TextSize = 11,
         TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 4})
     ctx.bind(header, "TextColor3", "Secondary")
-    local rule = ctx.new("Frame", {Name = "SectionRule", Position = UDim2.fromOffset(16, 40),
+    local rule = ctx.new("Frame", {Name = "SectionRule", Position = UDim2.fromOffset(16, 38),
         Size = UDim2.new(1, -32, 0, 1), BackgroundTransparency = .94, ZIndex = 4}, frame)
     ctx.bind(rule, "BackgroundColor3", "Primary")
-    local body = ctx.new("Frame", {Name = "Rows", BackgroundTransparency = 1, Position = UDim2.fromOffset(16, 48),
-        Size = UDim2.new(1, -32, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 4}, frame)
+    local body = ctx.new("Frame", {Name = "Rows", BackgroundTransparency = 1, Position = UDim2.fromOffset(4, 46),
+        Size = UDim2.new(1, -8, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 4}, frame)
     local layout = ctx.new("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4)}, body)
     local section = {Name = tostring(name), Frame = frame, Header = header, Body = body, Layout = layout,
         Controls = {}, Visible = true, Explicit = explicit, Tab = tab, Column = column}
@@ -534,6 +535,27 @@ function ctx.row(tab, rawOptions, height)
     ctx.tooltip(control, options.Tooltip or options.Info or control.Name)
     queueReflow(tab)
     return control, frame, label, stroke
+end
+-- Row labels wrap instead of truncating; the row grows so the whole name stays readable.
+function ctx.wrapLabel(control, reserved, minimum)
+    local label, row = control.Label, control.Frame
+    label.AutomaticSize = Enum.AutomaticSize.Y
+    label.AnchorPoint = Vector2.new(0, .5)
+    label.Position = UDim2.new(0, 12, .5, 0)
+    label.Size = UDim2.new(1, -reserved, 0, 0)
+    label.TextSize = 14
+    label.TextWrapped = true
+    label.TextTruncate = Enum.TextTruncate.None
+    label.TextYAlignment = Enum.TextYAlignment.Center
+    label.LineHeight = 1.1
+    local function resize()
+        if control.Destroyed or not label.Parent then return end
+        local height = math.max(minimum or 36, math.ceil(ctx.unscale(label.AbsoluteSize.Y)) + 16)
+        if row.Size.Y.Offset ~= height then row.Size = UDim2.new(1, 0, 0, height) end
+    end
+    ctx.connect(label:GetPropertyChangedSignal("AbsoluteSize"), resize)
+    ctx.delay(0, resize)
+    return resize
 end
 local function controlValue(control)
     if control.Type == "Dropdown" then return table.clone(control.CurrentOption or {}) end
@@ -687,12 +709,27 @@ local function logo(parent, image, position, size)
         Font = Enum.Font.GothamBold, TextSize = 24, TextXAlignment = Enum.TextXAlignment.Center})
 end
 local function topButton(parent, name, x, callback)
-    local button = ctx.new("TextButton", {Name = name, Text = "", BackgroundTransparency = 0,
+    local button = ctx.new("TextButton", {Name = name, Text = "", BackgroundTransparency = 1,
         AutoButtonColor = false, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, x, 0, 8),
         Size = UDim2.fromOffset(32, 32), ZIndex = 8}, parent)
-    ctx.bind(button, "BackgroundColor3", "Input")
+    ctx.bind(button, "BackgroundColor3", name == "close" and function() return Color3.fromHex("E5484D") end or "Hover")
     ctx.round(button, 6)
-    ctx.vectorIcon(button, name, {Position = UDim2.fromOffset(8, 8), Size = UDim2.fromOffset(16, 16), ZIndex = 9})
+    local icon = ctx.vectorIcon(button, name, {Position = UDim2.fromOffset(8, 8), Size = UDim2.fromOffset(16, 16),
+        ZIndex = 9, Role = "Secondary"})
+    local function iconRole(role)
+        for _, part in ipairs(icon:GetDescendants()) do
+            if part:IsA("Frame") then ctx.bind(part, "BackgroundColor3", role, true)
+            elseif part:IsA("UIStroke") then ctx.bind(part, "Color", role, true) end
+        end
+    end
+    -- Borderless icon buttons: a soft surface appears on hover only.
+    ctx.connect(button.MouseEnter, function()
+        ctx.tween(button, {BackgroundTransparency = name == "close" and .2 or 0}, .12)
+        iconRole(name == "close" and function() return Color3.new(1, 1, 1) end or "Primary")
+    end)
+    ctx.connect(button.MouseLeave, function()
+        ctx.tween(button, {BackgroundTransparency = 1}, .12); iconRole("Secondary")
+    end)
     ctx.connect(button.Activated, callback)
     return button
 end
@@ -782,17 +819,41 @@ function Library:CreateWindow(rawOptions)
     local canvas = ctx.new("Frame", {Name = "Interface", BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 1), Visible = false, ZIndex = 2}, root)
     state.canvas = canvas
-    local ambientFrame = ctx.new("Frame", {Name = "DigitalAtmosphere", BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(0, HEADER_HEIGHT), Size = UDim2.new(1, 0, 1, -HEADER_HEIGHT), ClipsDescendants = true, ZIndex = 2}, canvas)
-    state.atmosphere = ctx.createAtmosphere(ambientFrame, {Mode = "ambient", Running = false, ZIndex = 2})
+    -- A faint top-down wash replaces the ambient glyph field, which read as noise between cards.
+    local wash = ctx.new("Frame", {Name = "BackgroundWash", Position = UDim2.fromOffset(0, HEADER_HEIGHT),
+        Size = UDim2.new(1, 0, 1, -HEADER_HEIGHT), BackgroundTransparency = .97, Active = false, ZIndex = 2}, canvas)
+    ctx.bind(wash, "BackgroundColor3", "Primary")
+    ctx.new("UIGradient", {Rotation = 90, Transparency = NumberSequence.new(0, 1)}, wash)
     local header = ctx.new("Frame", {Name = "Header", Size = UDim2.new(1, 0, 0, HEADER_HEIGHT), ZIndex = 7}, canvas)
     ctx.bind(header, "BackgroundColor3", "Base")
+    local headerRule = ctx.new("Frame", {Name = "HeaderRule", AnchorPoint = Vector2.new(0, 1),
+        Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0, 1), BackgroundTransparency = .94, ZIndex = 8}, header)
+    ctx.bind(headerRule, "BackgroundColor3", "Border")
     logo(header, image, UDim2.fromOffset(12, 8), UDim2.fromOffset(32, 32))
-    ctx.text(header, window.Name, {Position = UDim2.fromOffset(52, 8), Size = UDim2.new(1, -176, 0, 20),
-        TextSize = 14, Font = Enum.Font.GothamBold, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 8})
-    local subtitle = ctx.text(header, options.Subtitle or "v" .. Library.Version,
-        {Position = UDim2.fromOffset(52, 28), Size = UDim2.new(1, -176, 0, 16), Font = ctx.font,
-        TextSize = 12, TextColor3 = ctx.colors.Secondary, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 8})
+    ctx.text(header, window.Name, {Position = UDim2.fromOffset(52, 7), Size = UDim2.new(1, -176, 0, 20),
+        TextSize = 15, Font = Enum.Font.GothamBold, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 8})
+    -- "PREMIUM / v1.2" subtitles render the tier as a pill and the remainder as muted text.
+    local subtitleText = tostring(options.Subtitle or "v" .. Library.Version)
+    local badgeText, restText = options.Badge, subtitleText
+    if badgeText == nil then
+        local tier, rest = string.match(subtitleText, "^%s*(%u[%u%d]+)%s*[/|·]%s*(.-)%s*$")
+        if tier then badgeText, restText = tier, rest end
+    end
+    local subtitleRow = ctx.new("Frame", {Name = "Subtitle", BackgroundTransparency = 1, Position = UDim2.fromOffset(52, 27),
+        Size = UDim2.new(1, -176, 0, 16), ClipsDescendants = true, ZIndex = 8}, header)
+    ctx.new("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6),
+        VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder}, subtitleRow)
+    if badgeText and tostring(badgeText) ~= "" then
+        local badge = ctx.new("Frame", {Name = "TierBadge", Size = UDim2.fromOffset(0, 15),
+            AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = .84, LayoutOrder = 1, ZIndex = 8}, subtitleRow)
+        ctx.bind(badge, "BackgroundColor3", "Accent"); ctx.round(badge, 8)
+        ctx.new("UIPadding", {PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6)}, badge)
+        local badgeLabel = ctx.text(badge, string.upper(tostring(badgeText)), {Size = UDim2.fromOffset(0, 15),
+            AutomaticSize = Enum.AutomaticSize.X, Font = Enum.Font.GothamBold, TextSize = 9, ZIndex = 9})
+        ctx.bind(badgeLabel, "TextColor3", "Accent")
+    end
+    local subtitle = ctx.text(subtitleRow, restText, {Size = UDim2.fromOffset(0, 16), AutomaticSize = Enum.AutomaticSize.X,
+        Font = ctx.font, TextSize = 12, LayoutOrder = 2, ZIndex = 8})
     ctx.bind(subtitle, "TextColor3", "Secondary")
     local searchButton = topButton(header, "search", -84, function() end)
     searchButton.Name = "SearchButton"
@@ -809,7 +870,6 @@ function Library:CreateWindow(rawOptions)
         ctx.bind(searchField, "TextColor3", "Primary"); ctx.bind(searchField, "PlaceholderColor3", "Primary")
         ctx.connect(searchField:GetPropertyChangedSignal("Text"), function()
             state.query = string.lower(searchField.Text):match("^%s*(.-)%s*$") or ""
-            ctx.bind(searchButton, "BackgroundColor3", "Input")
             for _, tab in ipairs(state.tabs) do queueReflow(tab) end
         end)
         ctx.connect(searchField.FocusLost, function(entered) if entered then dismiss() end end)
@@ -832,7 +892,7 @@ function Library:CreateWindow(rawOptions)
         Size = UDim2.new(1, -sideWidth, 1, -HEADER_HEIGHT), BackgroundTransparency = 1, ClipsDescendants = true, ZIndex = 3}, canvas)
     state.content = content
     local function visualRunning(running)
-        state.atmosphere:SetRunning(running)
+        if state.atmosphere then state.atmosphere:SetRunning(running) end
     end
     local function viewport() return ctx.unscale(physicalViewport()) end
     local function constrainWindow(position)
@@ -953,8 +1013,8 @@ function Library:CreateWindow(rawOptions)
         local name = tostring(tabOptions.Name or "Tab")
         local tab = setmetatable({Name = name, Sections = {}, Window = window, Columns = {}}, Tab)
         local page = ctx.new("ScrollingFrame", {Name = name, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
-            CanvasSize = UDim2.new(), ScrollBarThickness = 3, ScrollingDirection = Enum.ScrollingDirection.Y,
-            Visible = false, ZIndex = 3}, content)
+            CanvasSize = UDim2.new(), ScrollBarThickness = 3, ScrollBarImageTransparency = .55,
+            ScrollingDirection = Enum.ScrollingDirection.Y, Visible = false, ZIndex = 3}, content)
         ctx.bind(page, "ScrollBarImageColor3", "Accent"); tab.Page = page
         for _, columnName in ipairs({"LeftColumn", "RightColumn"}) do
             table.insert(tab.Columns, ctx.new("Frame", {Name = columnName, BackgroundTransparency = 1, Size = UDim2.fromOffset(0, 0), ZIndex = 3}, page))

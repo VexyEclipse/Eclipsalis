@@ -1,6 +1,6 @@
 # Eclipse UI
 
-A polished, compact Roblox interface for Eclipse. Version **1.5.0** uses charcoal surfaces, restrained blue active states, rounded switches and the original white flame logo. Built directly with Roblox GUI objects, with no external UI dependency.
+A polished, compact Roblox interface for Eclipse. Version **1.6.0** uses charcoal surfaces, restrained blue active states, rounded switches and the original white flame logo. Built directly with Roblox GUI objects, with no external UI dependency.
 
 ```lua
 local Eclipse = loadstring(game:HttpGet("https://raw.githubusercontent.com/VexyEclipse/Eclipsalis/main/EclipseUI.lua"))()
@@ -33,9 +33,9 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/VexyEclipse/Eclipsali
 
 - Responsive 660×420 logical desktop window; compact screens use one section column. No manual resizing.
 - 148px sidebar with a 44px collapsed rail, rounded icon search, thin 3px content scrollbar and soft window shadow.
-- 34px interactive rows; consistent 64px value fields and 88px dropdown selectors, 28px keycaps and fully rounded switches. Labels and paragraphs may grow to fit multiline content.
+- 36px interactive rows on one 16px card inset; 64px value fields, 88px dropdown selectors, 28px keycaps and fully rounded switches. Row labels wrap and grow the row instead of truncating.
 - Neutral buttons, borderless row hover, 4px slider tracks with 12px knobs and 0.15s Quad Out motion.
-- Sans labels (14px), uppercase secondary section titles (13px) and monospace only for numeric values/keybinds.
+- Sans labels (14px), bold uppercase secondary section titles (11px) and monospace only for numeric values/keybinds.
 - Sections, dividers, labels, paragraphs, buttons, toggles, exact-value sliders, searchable single/multi dropdowns, text/numeric inputs, keyboard/mouse keybinds, HSV/hex/RGB picker, explicit notifications and dialogs.
 - Compatible flags, silent setters, JSON configuration and owned cleanup. Existing custom theme APIs and named presets remain available for callers.
 
@@ -43,7 +43,7 @@ The default palette is window #0E0F12, sidebar #121317, sections #16181D, row ho
 
 Controls are added to the latest section in a tab. `Section:CreateToggle(...)` also works for explicit grouping. Search only filters visibility; it never changes values. The title region smoothly drags the window on rendered frames; the movement listener stops after settling. K toggles visibility and the 36px flame-icon control reopens it, with a faint steady glow. Scaling and compact layout fit smaller viewports initially; dragging can move the body off-screen while leaving a reachable title strip. Popovers use the same logical coordinates. `OnClose` can connect the header Close action to your application's cleanup; otherwise Close destroys the UI.
 
-The ASCII renderer uses one shared RenderStepped connection, throttled to 18 updates per second, with bounded cell and ripple counts. Ambient glyphs are more visible, at about 0.70–0.82 transparency; pointer-triggered ripples are disabled. The background stops while minimized, and their resources disconnect on unload. This bounds work; actual frame cost still requires measurement in Roblox.
+The ASCII renderer now only animates the boot screen: one shared RenderStepped connection, throttled to 18 updates per second, with bounded cell counts. The window body uses a faint static top-down wash instead of ambient glyphs, and buttons no longer carry glyph decorations.
 
 The owner's original white flame logo is preserved, as requested on 21 October. Its exact transparent PNG is embedded in the module and loaded with executor `writefile` plus `getcustomasset`/`getsynasset`; an E monogram is the fallback. No generated logo is used. Supply `LogoId` for your own published image instead. The original vector trace is [UI/Assets/eclipse-logo.svg](UI/Assets/eclipse-logo.svg).
 
@@ -141,3 +141,8 @@ v1.4.4: fixed color-picker badge overlap by removing parent UIPadding and placin
 v1.5.0 theme update: every preset now owns Sidebar, Section, Hover, Input, Secondary, Border, Shadow and OnAccent colors as well as Base/Primary/Accent. Light uses pale surfaces, dark readable labels, blue active states and a dark drop shadow; theme changes update existing controls and focus states. CyberYellow uses olive-black surfaces and acid yellow, AmberGlow uses warm brown/copper surfaces and amber, and NeonCyan uses deep blue-teal surfaces and cyan. Absolute Dark only deepens Default backgrounds while preserving its text, secondary text and blue accent. Three-token custom palettes still work through derived surface colors; optional semantic overrides are supported. Library.ThemeNames exposes the ordered preset list; the gallery and local Premium selector use it, with a six-name fallback. Existing saved theme aliases remain supported. No gameplay behavior changes.
 
 Validation: 96 temporary checks passed for all six presets, live card/input bindings, primary and secondary text contrast (at least 4.5:1 on the five main surfaces), switch contrast, darker Absolute Dark surfaces, retained foreground colors, legacy aliases, three-token custom themes, and invalid palette rejection. Library/gallery, both Premium wrappers and the extracted runtime compile; Premium entry files match. Temporary verification files were removed. Roblox rendering and profile/teleport theme restoration remain live checks.
+
+
+## 22 October premium polish — v1.6.0
+
+v1.6.0 layout and polish pass: row labels wrap onto a second line and grow the row instead of ending in an ellipsis. The ambient glyph field and the button glyph decorations are removed; a faint static wash replaces them. Section headers, rules and row content share one 16px inset. Sliders put the label and exact value (with a dimmer unit) on one line above a full-width track; the value is still editable on click. Off switches use a raised track with a hairline edge and a muted knob; the knob grows with a slight overshoot when turned on. Buttons are outlined, use a medium-weight label and an action arrow that turns accent and nudges on hover. Header icon buttons are borderless with hover surfaces (close hovers red), a hairline separates the header, and a "TIER / version" subtitle renders the tier as an accent pill. API, callbacks and saved values are unchanged.
