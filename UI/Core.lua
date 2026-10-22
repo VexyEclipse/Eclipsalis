@@ -4,30 +4,48 @@ local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
-local Library = {Flags = {}, Version = "1.4.4", Name = "Eclipse UI"}
+local Library = {Flags = {}, Version = "1.5.0", Name = "Eclipse UI"}
 local Tab = {}
 Tab.__index = Tab
 local WINDOW_WIDTH, WINDOW_HEIGHT = 660, 420
 local SIDEBAR_WIDTH, HEADER_HEIGHT = 148, 48
 local ctx = {Tab = Tab, UIS = UIS, fontMono = Enum.Font.Code, font = Enum.Font.Gotham, pad = 12}
-ctx.colors = {Sidebar = Color3.fromHex("121317"), Section = Color3.fromHex("16181D"),
-    Hover = Color3.fromHex("1D2026"), Input = Color3.fromHex("0B0C0F"), Secondary = Color3.fromHex("8A8F98"),
-    White = Color3.fromHex("FFFFFF")}
 local state = {alive = true, connections = {}, threads = {}, bindings = setmetatable({}, {__mode = "k"}),
     tweens = setmetatable({}, {__mode = "k"}), tabs = {}, controls = {}, cleanups = {}, query = "", loading = false}
-local function palette(base, primary, accent)
-    return {Base = Color3.fromHex(base), Primary = Color3.fromHex(primary), Accent = Color3.fromHex(accent)}
+local surfaceRoles = {"Sidebar", "Section", "Hover", "Input", "Secondary", "Border", "Shadow", "OnAccent"}
+local function palette(base, primary, accent, surfaces)
+    local result = {Base = Color3.fromHex(base), Primary = Color3.fromHex(primary), Accent = Color3.fromHex(accent)}
+    for role, value in pairs(surfaces or {}) do result[role] = Color3.fromHex(value) end
+    return result
 end
+local function resolveTheme(theme)
+    local white, black = Color3.new(1, 1, 1), Color3.new(0, 0, 0)
+    local light = theme.Base.R * .2126 + theme.Base.G * .7152 + theme.Base.B * .0722 > .55
+    local result = {Base = theme.Base, Primary = theme.Primary, Accent = theme.Accent,
+        Sidebar = theme.Base:Lerp(theme.Primary, .04),
+        Section = light and theme.Base:Lerp(white, .8) or theme.Base:Lerp(theme.Primary, .04),
+        Hover = theme.Base:Lerp(theme.Primary, light and .08 or .1),
+        Input = light and theme.Base:Lerp(white, .35) or theme.Base:Lerp(black, .3),
+        Secondary = theme.Primary:Lerp(theme.Base, .32), Border = light and black or white,
+        Shadow = black, OnAccent = light and white or theme.Primary}
+    for _, role in ipairs(surfaceRoles) do
+        if typeof(theme[role]) == "Color3" then result[role] = theme[role] end
+    end
+    return result
+end
+Library.ThemeNames = {"Default", "Absolute Dark", "CyberYellow", "AmberGlow", "NeonCyan", "Light"}
 Library.Themes = {
-    Default = palette("0E0F12", "E6E8EC", "3B82F6"),
-    CyberYellow = palette("0B0C0B", "F2F2E8", "FCEE09"),
-    AmberGlow = palette("100D09", "F2EEE6", "FF9E00"),
-    NeonCyan = palette("080E11", "E5F1F3", "00F0FF"),
-    Light = palette("ECECF1", "17171E", "6854D8"),
+    Default = palette("0E0F12", "E6E8EC", "3B82F6", {Sidebar="121317", Section="16181D", Hover="1D2026", Input="0B0C0F", Secondary="8A8F98", Shadow="0B0C0F"}),
+    ["Absolute Dark"] = palette("020304", "E6E8EC", "3B82F6", {Sidebar="050608", Section="090B0E", Hover="11151B", Input="010203", Secondary="8A8F98", Shadow="000000"}),
+    CyberYellow = palette("101208", "F4F5DE", "FCEE09", {Sidebar="191C0D", Section="222615", Hover="30371B", Input="090C05", Secondary="B0B596", OnAccent="101208"}),
+    AmberGlow = palette("191009", "FFF0DF", "FFAD42", {Sidebar="23170F", Section="302015", Hover="412D1D", Input="100A06", Secondary="C6A88A", OnAccent="191009"}),
+    NeonCyan = palette("06151C", "E1F8FF", "00E5FF", {Sidebar="09212B", Section="0D2C38", Hover="123F4E", Input="031016", Secondary="8DBAC7", OnAccent="06151C"}),
+    Light = palette("EDF1F7", "192332", "2563EB", {Sidebar="E2E8F1", Section="FFFFFF", Hover="DCE5F2", Input="EAF0F7", Secondary="536174", Border="192332", Shadow="101827", OnAccent="FFFFFF"}),
 }
 local aliases = {Eclipse = "Default", Amethyst = "Default", Bloom = "Default", Serenity = "Default",
-    DarkBlue = "NeonCyan", Ocean = "NeonCyan", Green = "NeonCyan"}
-state.theme = Library.Themes.Default
+    AbsoluteDark = "Absolute Dark", DarkBlue = "NeonCyan", Ocean = "NeonCyan", Green = "NeonCyan"}
+state.theme = resolveTheme(Library.Themes.Default)
+ctx.colors = state.theme
 Library.Theme = Library.Themes
 function ctx.alive() return state.alive end
 function ctx.theme() return state.theme end
@@ -121,7 +139,7 @@ function ctx.tween(object, goals, duration, easing)
 end
 function ctx.spring(object, goals, duration) return ctx.tween(object, goals, duration or 0.15, Enum.EasingStyle.Quad) end
 local function color(role)
-    return type(role) == "function" and role(state.theme) or ctx.colors[role] or state.theme[role]
+    return type(role) == "function" and role(state.theme) or state.theme[role]
 end
 function ctx.bind(object, property, role, animate)
     local bindings = state.bindings[object] or {}
@@ -322,7 +340,7 @@ function ctx.popup(control, width, height)
         BackgroundTransparency = 0, ZIndex = 51, ClipsDescendants = true}, state.overlay)
     ctx.bind(panel, "BackgroundColor3", "Section")
     ctx.round(panel, 6)
-    ctx.stroke(panel, "White", .94)
+    ctx.stroke(panel, "Border", .94)
     local function position()
         if not panel.Parent or not control.Frame.Parent then return end
         local size = ctx.unscale(state.overlay.AbsoluteSize)
@@ -427,7 +445,7 @@ local function makeSection(tab, name, explicit)
     local frame = ctx.new("CanvasGroup", {Name = "Section", BackgroundTransparency = 0,
         Size = UDim2.fromOffset(240, 34), ClipsDescendants = false, ZIndex = 3}, tab.Columns[column])
     ctx.bind(frame, "BackgroundColor3", "Section")
-    ctx.round(frame, 8); ctx.stroke(frame, "White", .94)
+    ctx.round(frame, 8); ctx.stroke(frame, "Border", .94)
     local header = ctx.text(frame, sectionCaption(name), {Position = UDim2.fromOffset(16, 16),
         Size = UDim2.new(1, -32, 0, 16), Font = Enum.Font.GothamMedium, TextSize = 13,
         TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 4})
@@ -609,8 +627,9 @@ function Library:ModifyTheme(theme)
     if type(theme) == "string" then theme = self.Themes[aliases[theme] or theme] end
     if type(theme) ~= "table" or typeof(theme.Base) ~= "Color3" or typeof(theme.Primary) ~= "Color3"
         or typeof(theme.Accent) ~= "Color3" then return false end
-    -- Clone only the three public tokens; every surface resolves from these.
-    state.theme = {Base = theme.Base, Primary = theme.Primary, Accent = theme.Accent}
+    -- Keep three-token custom themes compatible, with optional semantic surface overrides.
+    state.theme = resolveTheme(theme)
+    ctx.colors = state.theme
     for object, properties in pairs(state.bindings) do
         if object.Parent then
             local goals = {}
@@ -717,7 +736,7 @@ function Library:CreateWindow(rawOptions)
         local layer = ctx.new("Frame", {Name = "ShadowFalloff", Position = UDim2.fromOffset(-spread, 6 - spread),
             Size = UDim2.new(1, spread * 2, 1, spread * 2), BackgroundTransparency = .975 - (12 - spread) * .0015,
             Active = false, ZIndex = 1}, shadow)
-        ctx.bind(layer, "BackgroundColor3", "Input"); ctx.round(layer, 10 + spread)
+        ctx.bind(layer, "BackgroundColor3", "Shadow"); ctx.round(layer, 10 + spread)
     end
     local brackets = ctx.new("Frame", {Name = "CornerBrackets", BackgroundTransparency = 1,
         Size = root.Size, Position = root.Position, Active = false, ZIndex = 3}, stage)

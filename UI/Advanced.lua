@@ -796,7 +796,7 @@ return function(Library, ctx)
         ctx.new("UISizeConstraint", {MaxSize = Vector2.new(430, 278)}, card)
         ctx.bind(card, "BackgroundColor3", "Section")
         ctx.round(card, 6)
-        ctx.stroke(card, "White", .94)
+        ctx.stroke(card, "Border", .94)
         ctx._modalOpen = (ctx._modalOpen or 0) + 1
         if ctx._keybindCapture and ctx._keybindCapture.CancelCapture then ctx._keybindCapture.CancelCapture() end
         local handle, escapeConnection, sizeConnection = {Frame = card, Closed = false}, nil, nil

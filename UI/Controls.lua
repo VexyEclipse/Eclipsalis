@@ -128,11 +128,12 @@ return function(Library, ctx)
         local block = new("Frame", {
             Name = "ToggleThumb", Position = UDim2.fromOffset(4, 4), Size = UDim2.fromOffset(16, 16), BorderSizePixel = 0,
         }, track)
-        bind(block, "BackgroundColor3", "Primary")
+        local function thumbColor(t) return control.CurrentValue and t.OnAccent or t.Primary end
+        bind(block, "BackgroundColor3", thumbColor)
         ctx.round(block, 8)
         local function render(animate)
             local enabled = control.CurrentValue
-            bind(block, "BackgroundColor3", "Primary", animate)
+            bind(block, "BackgroundColor3", thumbColor, animate)
             local duration = animate and 0.15 or 0
             ctx.spring(block, {Position = UDim2.fromOffset(enabled and 20 or 4, 4)}, duration)
             tween(track, {BackgroundColor3 = trackColor(ctx.theme())}, animate and 0.15 or 0)

@@ -3,7 +3,7 @@ local Eclipse = loadstring(game:HttpGet("https://raw.githubusercontent.com/VexyE
 
 local Window = Eclipse:CreateWindow({
     Name = "Eclipse Hub",
-    Subtitle = "TOTALITY / v1.4.4",
+    Subtitle = "TOTALITY / v1.5.0",
     LoadingTitle = "ECLIPSE",
     LoadingSubtitle = "INTERFACE INITIALIZATION",
     ShowText = "ECLIPSE",
@@ -81,7 +81,7 @@ Farms:CreateToggle({Name = "Cake Stun", CurrentValue = false, Flag = "DemoCakeSt
 
 local Settings = Window:CreateTab("Settings")
 Settings:CreateSection("Appearance")
-Settings:CreateDropdown({Name = "Theme", Options = {"Default", "CyberYellow", "AmberGlow", "NeonCyan", "Light"},
+Settings:CreateDropdown({Name = "Theme", Options = Eclipse.ThemeNames or {"Default", "Absolute Dark", "CyberYellow", "AmberGlow", "NeonCyan", "Light"},
     CurrentOption = {"Default"}, MultipleOptions = false, Flag = "DemoTheme", Callback = function(selected)
         if selected[1] then Window.ModifyTheme(selected[1]) end
     end})

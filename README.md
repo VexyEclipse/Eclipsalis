@@ -1,6 +1,6 @@
 # Eclipse UI
 
-A polished, compact Roblox interface for Eclipse. Version **1.4.1** uses charcoal surfaces, restrained blue active states, rounded switches and the original white flame logo. Built directly with Roblox GUI objects, with no external UI dependency.
+A polished, compact Roblox interface for Eclipse. Version **1.5.0** uses charcoal surfaces, restrained blue active states, rounded switches and the original white flame logo. Built directly with Roblox GUI objects, with no external UI dependency.
 
 ```lua
 local Eclipse = loadstring(game:HttpGet("https://raw.githubusercontent.com/VexyEclipse/Eclipsalis/main/EclipseUI.lua"))()
@@ -39,7 +39,7 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/VexyEclipse/Eclipsali
 - Sections, dividers, labels, paragraphs, buttons, toggles, exact-value sliders, searchable single/multi dropdowns, text/numeric inputs, keyboard/mouse keybinds, HSV/hex/RGB picker, explicit notifications and dialogs.
 - Compatible flags, silent setters, JSON configuration and owned cleanup. Existing custom theme APIs and named presets remain available for callers.
 
-The default palette is window #0E0F12, sidebar #121317, sections #16181D, row hover #1D2026, inputs #0B0C0F, active accent #3B82F6, text #E6E8EC and secondary text #8A8F98. Sections use a faint white stroke at 94% transparency. The original Base/Primary/Accent customization API remains; semantic surface tokens keep the default design consistent.
+The default palette is window #0E0F12, sidebar #121317, sections #16181D, row hover #1D2026, inputs #0B0C0F, active accent #3B82F6, text #E6E8EC and secondary text #8A8F98. Sections use a faint white stroke at 94% transparency. The original Base/Primary/Accent customization API remains; each preset now supplies its own semantic surface colors.
 
 Controls are added to the latest section in a tab. `Section:CreateToggle(...)` also works for explicit grouping. Search only filters visibility; it never changes values. The title region smoothly drags the window on rendered frames; the movement listener stops after settling. K toggles visibility and the 36px flame-icon control reopens it, with a faint steady glow. Scaling and compact layout fit smaller viewports initially; dragging can move the body off-screen while leaving a reachable title strip. Popovers use the same logical coordinates. `OnClose` can connect the header Close action to your application's cleanup; otherwise Close destroys the UI.
 
@@ -134,3 +134,10 @@ v1.4.3: corner brackets now use the shared Accent color (#3B82F6 by default), wi
 
 
 v1.4.4: fixed color-picker badge overlap by removing parent UIPadding and placing the hex label and 16px swatch in separate lanes inside a 96px badge. The hex label has end ellipsis and the badge clips contents; picker/setter/callback behavior is unchanged. Library/gallery compilation passed. Live Roblox rendering remains to be checked.
+
+
+## 22 October full theme palettes — v1.5.0
+
+v1.5.0 theme update: every preset now owns Sidebar, Section, Hover, Input, Secondary, Border, Shadow and OnAccent colors as well as Base/Primary/Accent. Light uses pale surfaces, dark readable labels, blue active states and a dark drop shadow; theme changes update existing controls and focus states. CyberYellow uses olive-black surfaces and acid yellow, AmberGlow uses warm brown/copper surfaces and amber, and NeonCyan uses deep blue-teal surfaces and cyan. Absolute Dark only deepens Default backgrounds while preserving its text, secondary text and blue accent. Three-token custom palettes still work through derived surface colors; optional semantic overrides are supported. Library.ThemeNames exposes the ordered preset list; the gallery and local Premium selector use it, with a six-name fallback. Existing saved theme aliases remain supported. No gameplay behavior changes.
+
+Validation: 96 temporary checks passed for all six presets, live card/input bindings, primary and secondary text contrast (at least 4.5:1 on the five main surfaces), switch contrast, darker Absolute Dark surfaces, retained foreground colors, legacy aliases, three-token custom themes, and invalid palette rejection. Library/gallery, both Premium wrappers and the extracted runtime compile; Premium entry files match. Temporary verification files were removed. Roblox rendering and profile/teleport theme restoration remain live checks.
