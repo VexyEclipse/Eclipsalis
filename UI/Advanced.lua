@@ -27,9 +27,9 @@ return function(Library, ctx)
         properties.TextSize = properties.TextSize or 13
         properties.BorderSizePixel = 0
         properties.TextWrapped = false
-        properties.TextTruncate = Enum.TextTruncate.AtEnd
         properties.ClipsDescendants = true
         local box = ctx.new("TextBox", properties, parent)
+        ctx.fitText(box)
         local focused = false
         ctx.round(box, 6)
         local focusBorder = ctx.stroke(box, "Primary", .88)
@@ -38,13 +38,13 @@ return function(Library, ctx)
         ctx.bind(box, "PlaceholderColor3", "Secondary")
         ctx.connect(box.Focused, function()
             focused = true
-            box.TextTruncate = Enum.TextTruncate.None
+            ctx.fitText(box, nil, false)
             ctx.tween(box, {BackgroundColor3 = ctx.colors.Input}, 0.14)
             ctx.tween(focusBorder, {Transparency = .45}, .14)
         end)
         ctx.connect(box.FocusLost, function()
             focused = false
-            box.TextTruncate = Enum.TextTruncate.AtEnd
+            ctx.fitText(box)
             ctx.tween(box, {BackgroundColor3 = ctx.colors.Input}, 0.14)
             ctx.tween(focusBorder, {Transparency = .88}, .14)
         end)
@@ -57,8 +57,8 @@ return function(Library, ctx)
             Name = "Control", AnchorPoint = Vector2.new(1, .5), Position = UDim2.new(1, -12, .5, 0),
             Size = UDim2.fromOffset(width, 28), BackgroundTransparency = 0,
             AutoButtonColor = false, BorderSizePixel = 0, Font = ctx.font, TextSize = 13, Text = "",
-            TextTruncate = Enum.TextTruncate.AtEnd,
         }, control.Frame)
+        ctx.fitText(button)
         ctx.round(button, 6)
         local badgeActive = false
         local outline = ctx.stroke(button, "Primary", .9)
@@ -674,8 +674,9 @@ return function(Library, ctx)
         local button = ctx.new("TextButton", {
             Name = "Action", LayoutOrder = index, Size = UDim2.new(1 / count, -6, 1, 0),
             BorderSizePixel = 0, AutoButtonColor = false, Font = Enum.Font.GothamMedium, TextSize = 11,
-            Text = tostring(action.Text or action.Name or action.Title or "Continue"), TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = z,
+            Text = tostring(action.Text or action.Name or action.Title or "Continue"), ZIndex = z,
         }, parent)
+        ctx.fitText(button)
         ctx.round(button, 6)
         ctx.bind(button, "BackgroundColor3", "Input")
         ctx.bind(button, "TextColor3", "Primary")

@@ -1,6 +1,6 @@
 # Eclipse UI
 
-A polished, compact Roblox interface for Eclipse. Version **1.6.7** uses near-black Absolute Dark surfaces, restrained blue active states, rounded switches and the original white flame logo. Built directly with Roblox GUI objects, with no external UI dependency.
+A polished, compact Roblox interface for Eclipse. Version **1.6.8** uses near-black Absolute Dark surfaces, restrained blue active states, rounded switches and the original white flame logo. Built directly with Roblox GUI objects, with no external UI dependency.
 
 ```lua
 local Eclipse = loadstring(game:HttpGet("https://raw.githubusercontent.com/VexyEclipse/Eclipsalis/main/EclipseUI.lua"))()
@@ -8,7 +8,7 @@ local Window = Eclipse:CreateWindow({
     Name = "Eclipse Hub",
     LoadingTitle = "ECLIPSE",
     LoadingSubtitle = "v1.4.1",
-    Subtitle = "v1.6.7",
+    Subtitle = "v1.6.8",
     Badge = "Premium",          -- title bar pill; see "Title bar pill" below
     BadgeColor = "#A855F7",
     Theme = "Absolute Dark",
@@ -229,3 +229,5 @@ v1.6.5: the title bar pill is configurable from `CreateWindow`: `Badge` (text, `
 v1.6.6: mobile support. The window fits the screen before scaling (phones keep near full-size text instead of about 0.8×), respects device safe areas and the Roblox top bar on touch screens, uses larger touch targets, ignores hover on touch, and sliders only drag on a sideways swipe so pages scroll freely. See [Mobile and small screens](#mobile-and-small-screens).
 
 v1.6.7: the sidebar collapse control is the plain panel icon with a separate, larger Lucide `chevron-left` arrow to its right, shown only while the sidebar is expanded. Switch and slider neon uses a single bloom layer instead of two (`ctx.glow` takes an optional `single` flag); buttons keep the two-layer press flash.
+
+v1.6.8: text no longer cuts off with an ellipsis or spills out of its element. Single-line text shrinks to fit its box instead, never above its normal size and no smaller than 7px: window title and subtitle, section headers, sidebar tabs, dropdown values and options, keycaps, color hex values, input values and placeholders while not being edited, notification and dialog titles, and dialog buttons. The subtitle now uses the width the pill leaves. Row labels still wrap onto extra lines, and text you are typing stays at its normal size. `ctx.fitText(object, minimum, enabled)` applies the same behavior to custom elements.

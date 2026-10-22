@@ -57,14 +57,19 @@ return function(Library, ctx)
         properties.BackgroundTransparency = properties.BackgroundTransparency or 1
         properties.BorderSizePixel = 0
         properties.TextWrapped = false
-        properties.TextTruncate = Enum.TextTruncate.AtEnd
         properties.ClipsDescendants = true
         properties.ClearTextOnFocus = properties.ClearTextOnFocus == true
+        local fit = properties.Fit ~= false
+        properties.Fit = nil
         local box = new("TextBox", properties, parent)
         bind(box, "TextColor3", "Primary")
         bind(box, "PlaceholderColor3", "Secondary")
-        ctx.connect(box.Focused, function() box.TextTruncate = Enum.TextTruncate.None end)
-        ctx.connect(box.FocusLost, function() box.TextTruncate = Enum.TextTruncate.AtEnd end)
+        -- Unfocused values and placeholders shrink to fit; typing uses the normal size.
+        if fit then
+            ctx.fitText(box)
+            ctx.connect(box.Focused, function() ctx.fitText(box, nil, false) end)
+            ctx.connect(box.FocusLost, function() ctx.fitText(box) end)
+        end
         return box
     end
 
@@ -217,11 +222,10 @@ return function(Library, ctx)
         ctx.round(field, 6)
         local focusedStroke = border(field)
         local valueBox = inputBox(field, {
-            Name = "ExactValue", Font = mono, Size = UDim2.fromOffset(0, 22), AutomaticSize = Enum.AutomaticSize.X,
+            Name = "ExactValue", Font = mono, Size = UDim2.fromOffset(0, 22), AutomaticSize = Enum.AutomaticSize.X, Fit = false,
             Text = "", TextSize = 13, TextXAlignment = Enum.TextXAlignment.Right, LayoutOrder = 1,
         })
         valueBox.ClipsDescendants = false
-        valueBox.TextTruncate = Enum.TextTruncate.None
         new("UISizeConstraint", {MinSize = Vector2.new(12, 0), MaxSize = Vector2.new(valueWidth - 8, math.huge)}, valueBox)
         if suffix ~= "" then
             local unit = text(field, suffix, {Size = UDim2.fromOffset(0, 22), AutomaticSize = Enum.AutomaticSize.X,

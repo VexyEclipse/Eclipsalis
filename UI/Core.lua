@@ -5,7 +5,7 @@ local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local GuiService = game:GetService("GuiService")
-local Library = {Flags = {}, Version = "1.6.7", Name = "Eclipse UI"}
+local Library = {Flags = {}, Version = "1.6.8", Name = "Eclipse UI"}
 local Tab = {}
 Tab.__index = Tab
 local WINDOW_WIDTH, WINDOW_HEIGHT = 660, 420
@@ -327,13 +327,33 @@ function ctx.vectorIcon(parent, name, properties)
     end
     return icon
 end
+-- Shrink text to fit its box instead of cutting it off: never larger than its normal TextSize,
+-- never smaller than `minimum`. Pass `false` as `enabled` to restore fixed-size text.
+function ctx.fitText(object, minimum, enabled)
+    local limit = object:FindFirstChildOfClass("UITextSizeConstraint")
+    if enabled == false then
+        object.TextScaled = false
+        if limit then object.TextSize = limit.MaxTextSize; limit:Destroy() end
+        return object
+    end
+    if not limit then
+        limit = ctx.new("UITextSizeConstraint", {MaxTextSize = math.max(1, math.floor(object.TextSize))}, object)
+    end
+    limit.MinTextSize = math.min(limit.MaxTextSize, minimum or 7)
+    object.TextTruncate = Enum.TextTruncate.None
+    object.TextScaled = true
+    return object
+end
+-- Single-line labels that would end in an ellipsis shrink to fit instead.
 function ctx.text(parent, value, properties)
     local props = {Text = tostring(value or ""), BackgroundTransparency = 1, Font = ctx.font,
         TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center,
         Size = UDim2.fromScale(1, 1), RichText = false}
     for key, item in pairs(properties or {}) do props[key] = item end
+    local fit = props.TextTruncate == Enum.TextTruncate.AtEnd and not props.TextWrapped
     local label = ctx.new("TextLabel", props, parent)
     ctx.bind(label, "TextColor3", "Primary")
+    if fit then ctx.fitText(label) end
     return label
 end
 function ctx.iconAsset(value)
@@ -579,7 +599,7 @@ function ctx.row(tab, rawOptions, height)
     ctx.bind(frame, "BackgroundColor3", "Section")
     ctx.round(frame, 6)
     local label = ctx.text(frame, options.Name or options.Title or "", {Position = UDim2.fromOffset(12, 0),
-        Size = UDim2.new(1, -115, 1, 0), TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 6})
+        Size = UDim2.new(1, -115, 1, 0), TextWrapped = false, ZIndex = 6})
     local stroke = nil -- Rows deliberately have no outline.
     local control = {Frame = frame, Label = label, Stroke = stroke, Options = options, _options = options,
         Name = options.Name or options.Title or "", Tab = tab, Section = section, Visible = options.Visible ~= false,
@@ -988,9 +1008,17 @@ function Library:CreateWindow(rawOptions)
     badge.Visible = false
     window:SetBadge(badgeText or false, badgeOptions.Color or options.BadgeColor,
         badgeOptions.TextColor or options.BadgeTextColor)
-    local subtitle = ctx.text(subtitleRow, restText, {Size = UDim2.fromOffset(0, 16), AutomaticSize = Enum.AutomaticSize.X,
+    local subtitle = ctx.text(subtitleRow, restText, {Size = UDim2.new(1, 0, 0, 16),
         Font = ctx.font, TextSize = 12, LayoutOrder = 2, ZIndex = 8})
-    ctx.bind(subtitle, "TextColor3", "Secondary")
+    ctx.bind(subtitle, "TextColor3", "Secondary"); ctx.fitText(subtitle)
+    -- The subtitle takes the width the pill leaves and shrinks to fit it.
+    local function sizeSubtitle()
+        local used = badge.Visible and math.ceil(ctx.unscale(badge.AbsoluteSize.X)) + 6 or 0
+        subtitle.Size = UDim2.new(1, -used, 0, 16)
+    end
+    ctx.connect(badge:GetPropertyChangedSignal("AbsoluteSize"), sizeSubtitle)
+    ctx.connect(badge:GetPropertyChangedSignal("Visible"), sizeSubtitle)
+    sizeSubtitle()
     local searchButton = topButton(header, "search", -84, function() end)
     searchButton.Name = "SearchButton"
     local searchControl = {Frame = searchButton}
