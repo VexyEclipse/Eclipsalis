@@ -4,7 +4,7 @@ local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
-local Library = {Flags = {}, Version = "1.6.0", Name = "Eclipse UI"}
+local Library = {Flags = {}, Version = "1.6.1", Name = "Eclipse UI"}
 local Tab = {}
 Tab.__index = Tab
 local WINDOW_WIDTH, WINDOW_HEIGHT = 660, 420
@@ -33,15 +33,17 @@ local function resolveTheme(theme)
     end
     return result
 end
-Library.ThemeNames = {"Default", "Absolute Dark", "CyberYellow", "AmberGlow", "NeonCyan", "Light"}
+Library.ThemeNames = {"Absolute Dark", "Charcoal", "CyberYellow", "AmberGlow", "NeonCyan", "Light"}
 Library.Themes = {
-    Default = palette("0E0F12", "E6E8EC", "3B82F6", {Sidebar="121317", Section="16181D", Hover="1D2026", Input="0B0C0F", Secondary="8A8F98", Shadow="0B0C0F"}),
+    Charcoal = palette("0E0F12", "E6E8EC", "3B82F6", {Sidebar="121317", Section="16181D", Hover="1D2026", Input="0B0C0F", Secondary="8A8F98", Shadow="0B0C0F"}),
     ["Absolute Dark"] = palette("020304", "E6E8EC", "3B82F6", {Sidebar="050608", Section="090B0E", Hover="11151B", Input="010203", Secondary="8A8F98", Shadow="000000"}),
     CyberYellow = palette("101208", "F4F5DE", "FCEE09", {Sidebar="191C0D", Section="222615", Hover="30371B", Input="090C05", Secondary="B0B596", OnAccent="101208"}),
     AmberGlow = palette("191009", "FFF0DF", "FFAD42", {Sidebar="23170F", Section="302015", Hover="412D1D", Input="100A06", Secondary="C6A88A", OnAccent="191009"}),
     NeonCyan = palette("06151C", "E1F8FF", "00E5FF", {Sidebar="09212B", Section="0D2C38", Hover="123F4E", Input="031016", Secondary="8DBAC7", OnAccent="06151C"}),
     Light = palette("EDF1F7", "192332", "2563EB", {Sidebar="E2E8F1", Section="FFFFFF", Hover="DCE5F2", Input="EAF0F7", Secondary="536174", Border="192332", Shadow="101827", OnAccent="FFFFFF"}),
 }
+-- Absolute Dark is the default; "Default" stays a valid name for existing scripts.
+Library.Themes.Default = Library.Themes["Absolute Dark"]
 local aliases = {Eclipse = "Default", Amethyst = "Default", Bloom = "Default", Serenity = "Default",
     AbsoluteDark = "Absolute Dark", DarkBlue = "NeonCyan", Ocean = "NeonCyan", Green = "NeonCyan"}
 state.theme = resolveTheme(Library.Themes.Default)
@@ -65,6 +67,7 @@ function ctx.ripple(position, strength)
     local atmosphere = state.bootDone and state.atmosphere or state.bootAtmosphere
     if atmosphere and not state.minimized then atmosphere:Ripple(position, strength or 1) end
 end
+function ctx.matrixEnabled() return state.matrix ~= false end
 function ctx.screen() return state.screen end
 function ctx.overlay() return state.overlay end
 function ctx.options(raw)
@@ -203,50 +206,90 @@ function ctx.vectorIcon(parent, name, properties)
     local icon = ctx.new("Frame", props, parent)
     local function line(x1, y1, x2, y2, thickness)
         local dx, dy = x2 - x1, y2 - y1
+        thickness = thickness or 1.5
+        -- Segments overshoot by most of their thickness so polyline joints close cleanly.
         local segment = ctx.new("Frame", {AnchorPoint = Vector2.new(0.5, 0.5),
             Position = UDim2.fromScale((x1 + x2) / 2, (y1 + y2) / 2),
-            Size = UDim2.new(math.sqrt(dx * dx + dy * dy), 0, 0, thickness or 1.4),
+            Size = UDim2.new(math.sqrt(dx * dx + dy * dy), thickness * .8, 0, thickness),
             Rotation = math.deg(math.atan2(dy, dx)), ZIndex = icon.ZIndex}, icon)
         ctx.bind(segment, "BackgroundColor3", role); ctx.round(segment, 1)
         return segment
     end
+    local function path(points, thickness)
+        for i = 1, #points - 1 do
+            line(points[i][1], points[i][2], points[i + 1][1], points[i + 1][2], thickness)
+        end
+    end
+    -- Quadratic curve sampled into short segments.
+    local function curve(x1, y1, cx, cy, x2, y2, steps)
+        local points = {}
+        for i = 0, steps or 6 do
+            local t = i / (steps or 6)
+            local u = 1 - t
+            table.insert(points, {u * u * x1 + 2 * u * t * cx + t * t * x2, u * u * y1 + 2 * u * t * cy + t * t * y2})
+        end
+        path(points)
+    end
     local function ring(x, y, w, h)
         local frame = ctx.new("Frame", {Position = UDim2.fromScale(x, y), Size = UDim2.fromScale(w, h or w),
             BackgroundTransparency = 1, ZIndex = icon.ZIndex}, icon)
-        ctx.round(frame, 100); ctx.stroke(frame, role, 0.05)
+        ctx.round(frame, 100); ctx.stroke(frame, role, 0.05).Thickness = 1.5
+        return frame
+    end
+    local function box(x, y, w, h, radius)
+        local frame = ctx.new("Frame", {Position = UDim2.fromScale(x, y), Size = UDim2.fromScale(w, h),
+            BackgroundTransparency = 1, ZIndex = icon.ZIndex}, icon)
+        ctx.round(frame, radius or 3); ctx.stroke(frame, role, 0.05).Thickness = 1.5
+        return frame
+    end
+    local function dot(x, y, size)
+        local frame = ctx.new("Frame", {AnchorPoint = Vector2.new(.5, .5), Position = UDim2.fromScale(x, y),
+            Size = UDim2.fromScale(size, size), ZIndex = icon.ZIndex}, icon)
+        ctx.bind(frame, "BackgroundColor3", role); ctx.round(frame, 100)
         return frame
     end
     name = string.lower(tostring(name or "grid"))
+    local function named(...)
+        for _, keyword in ipairs({...}) do if string.find(name, keyword, 1, true) then return true end end
+        return false
+    end
     if name == "close" or name == "x" then line(.25,.25,.75,.75); line(.75,.25,.25,.75)
     elseif name == "minimize" then line(.22,.65,.78,.65)
     elseif name == "chevron" or name == "chevron-down" then line(.25,.4,.5,.65); line(.5,.65,.75,.4)
     elseif name == "arrow" or name == "play" or name == "action" then
         line(.18,.5,.8,.5); line(.56,.25,.8,.5); line(.56,.75,.8,.5)
     elseif name == "check" then line(.2,.5,.42,.72); line(.42,.72,.82,.25)
-    elseif name == "search" then ring(.15,.12,.48); line(.56,.57,.84,.86)
-    elseif name == "sidebar" then line(.25,.18,.25,.82); line(.45,.28,.8,.28); line(.45,.5,.8,.5); line(.45,.72,.8,.72)
-    elseif name == "settings" then
-        ring(.27,.27,.46); ring(.44,.44,.12)
-        for i = 0, 7 do
-            local angle = i * math.pi / 4
-            line(.5 + math.cos(angle)*.26,.5 + math.sin(angle)*.26,.5 + math.cos(angle)*.4,.5 + math.sin(angle)*.4,2)
-        end
-    elseif name == "home" or name == "main" then
-        line(.15,.43,.5,.15); line(.5,.15,.85,.43); line(.25,.4,.25,.82); line(.25,.82,.75,.82); line(.75,.82,.75,.4)
-    elseif name == "eye" or name == "esp" then
-        line(.08,.5,.3,.27); line(.3,.27,.7,.27); line(.7,.27,.92,.5)
-        line(.08,.5,.3,.73); line(.3,.73,.7,.73); line(.7,.73,.92,.5); ring(.38,.38,.24)
-    elseif name == "farms" or name == "auto farms" or name == "crosshair" then
-        ring(.26,.26,.48); line(.5,.06,.5,.33); line(.5,.67,.5,.94); line(.06,.5,.33,.5); line(.67,.5,.94,.5)
+    elseif name == "search" then ring(.12,.12,.52); line(.6,.6,.86,.86)
+    elseif name == "sidebar" then box(.1,.16,.8,.68,3); line(.4,.2,.4,.8)
     elseif name == "keyboard" then
-        line(.1,.24,.9,.24); line(.9,.24,.9,.78); line(.9,.78,.1,.78); line(.1,.78,.1,.24); line(.28,.62,.72,.62)
-        for i = 0, 2 do line(.28+i*.22,.42,.28+i*.22,.44,2) end
-    else
-        for _, position in ipairs({{.18,.18},{.58,.18},{.18,.58},{.58,.58}}) do
-            local tile = ctx.new("Frame", {Position = UDim2.fromScale(position[1],position[2]),
-                Size = UDim2.fromScale(.24,.24), ZIndex = icon.ZIndex}, icon)
-            ctx.bind(tile, "BackgroundColor3", role); ctx.round(tile, 1)
+        box(.06,.22,.88,.56,3); line(.3,.64,.7,.64)
+        for i = 0, 3 do dot(.26 + i * .16, .42, .1) end
+    -- Sidebar tab icons, matched by keyword so "Auto Farms" or "Player ESP" resolve too.
+    elseif named("setting", "config") then
+        ring(.24,.24,.52); dot(.5,.5,.16)
+        for i = 0, 7 do
+            local angle = i * math.pi / 4 + math.pi / 8
+            line(.5 + math.cos(angle)*.3,.5 + math.sin(angle)*.3,.5 + math.cos(angle)*.42,.5 + math.sin(angle)*.42,2.4)
         end
+    elseif named("home", "main", "dashboard") then
+        path({{.1,.5},{.5,.14},{.9,.5}}); path({{.22,.4},{.22,.86},{.78,.86},{.78,.4}})
+        path({{.42,.86},{.42,.64},{.58,.64},{.58,.86}})
+    elseif named("eye", "esp", "visual") then
+        curve(.06,.5,.5,.06,.94,.5); curve(.06,.5,.5,.94,.94,.5); ring(.36,.36,.28); dot(.5,.5,.1)
+    elseif named("farm", "auto", "crosshair") then
+        path({{.6,.06},{.22,.56},{.5,.56},{.4,.94},{.78,.42},{.5,.42},{.6,.06}})
+    elseif named("player", "local", "user", "character", "profile") then
+        ring(.32,.08,.36); curve(.12,.92,.5,.34,.88,.92)
+    elseif named("teleport", "map", "world", "location") then
+        ring(.3,.1,.4); dot(.5,.3,.12); path({{.33,.44},{.5,.9},{.67,.44}})
+    elseif named("combat", "fight", "pvp", "aim", "kill") then
+        line(.2,.8,.84,.16); line(.12,.62,.38,.88); line(.12,.88,.22,.78,2.2)
+    elseif named("info", "credit", "about", "help") then
+        ring(.08,.08,.84); dot(.5,.28,.12); line(.5,.44,.5,.74,1.8)
+    elseif named("misc", "other", "extra", "more") then
+        for i = 0, 2 do dot(.2 + i * .3, .5, .16) end
+    else
+        for _, position in ipairs({{.1,.1},{.56,.1},{.1,.56},{.56,.56}}) do box(position[1], position[2], .34, .34, 2) end
     end
     return icon
 end
@@ -819,11 +862,18 @@ function Library:CreateWindow(rawOptions)
     local canvas = ctx.new("Frame", {Name = "Interface", BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 1), Visible = false, ZIndex = 2}, root)
     state.canvas = canvas
-    -- A faint top-down wash replaces the ambient glyph field, which read as noise between cards.
-    local wash = ctx.new("Frame", {Name = "BackgroundWash", Position = UDim2.fromOffset(0, HEADER_HEIGHT),
-        Size = UDim2.new(1, 0, 1, -HEADER_HEIGHT), BackgroundTransparency = .97, Active = false, ZIndex = 2}, canvas)
-    ctx.bind(wash, "BackgroundColor3", "Primary")
-    ctx.new("UIGradient", {Rotation = 90, Transparency = NumberSequence.new(0, 1)}, wash)
+    -- Matrix glyph field behind the cards; `Matrix = false` swaps it for a faint static wash.
+    state.matrix = options.Matrix ~= false
+    if state.matrix then
+        local ambientFrame = ctx.new("Frame", {Name = "DigitalAtmosphere", BackgroundTransparency = 1,
+            Position = UDim2.fromOffset(0, HEADER_HEIGHT), Size = UDim2.new(1, 0, 1, -HEADER_HEIGHT), ClipsDescendants = true, ZIndex = 2}, canvas)
+        state.atmosphere = ctx.createAtmosphere(ambientFrame, {Mode = "ambient", Running = false, ZIndex = 2})
+    else
+        local wash = ctx.new("Frame", {Name = "BackgroundWash", Position = UDim2.fromOffset(0, HEADER_HEIGHT),
+            Size = UDim2.new(1, 0, 1, -HEADER_HEIGHT), BackgroundTransparency = .97, Active = false, ZIndex = 2}, canvas)
+        ctx.bind(wash, "BackgroundColor3", "Primary")
+        ctx.new("UIGradient", {Rotation = 90, Transparency = NumberSequence.new(0, 1)}, wash)
+    end
     local header = ctx.new("Frame", {Name = "Header", Size = UDim2.new(1, 0, 0, HEADER_HEIGHT), ZIndex = 7}, canvas)
     ctx.bind(header, "BackgroundColor3", "Base")
     local headerRule = ctx.new("Frame", {Name = "HeaderRule", AnchorPoint = Vector2.new(0, 1),

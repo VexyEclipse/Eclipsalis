@@ -1,6 +1,6 @@
 # Eclipse UI
 
-A polished, compact Roblox interface for Eclipse. Version **1.6.0** uses charcoal surfaces, restrained blue active states, rounded switches and the original white flame logo. Built directly with Roblox GUI objects, with no external UI dependency.
+A polished, compact Roblox interface for Eclipse. Version **1.6.1** uses near-black Absolute Dark surfaces, restrained blue active states, rounded switches and the original white flame logo. Built directly with Roblox GUI objects, with no external UI dependency.
 
 ```lua
 local Eclipse = loadstring(game:HttpGet("https://raw.githubusercontent.com/VexyEclipse/Eclipsalis/main/EclipseUI.lua"))()
@@ -8,7 +8,7 @@ local Window = Eclipse:CreateWindow({
     Name = "Eclipse Hub",
     LoadingTitle = "ECLIPSE",
     LoadingSubtitle = "v1.4.1",
-    Theme = "Default",
+    Theme = "Absolute Dark",
     ToggleUIKeybind = "K",
     ConfigurationSaving = {Enabled = false},
 })
@@ -39,11 +39,11 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/VexyEclipse/Eclipsali
 - Sections, dividers, labels, paragraphs, buttons, toggles, exact-value sliders, searchable single/multi dropdowns, text/numeric inputs, keyboard/mouse keybinds, HSV/hex/RGB picker, explicit notifications and dialogs.
 - Compatible flags, silent setters, JSON configuration and owned cleanup. Existing custom theme APIs and named presets remain available for callers.
 
-The default palette is window #0E0F12, sidebar #121317, sections #16181D, row hover #1D2026, inputs #0B0C0F, active accent #3B82F6, text #E6E8EC and secondary text #8A8F98. Sections use a faint white stroke at 94% transparency. The original Base/Primary/Accent customization API remains; each preset now supplies its own semantic surface colors.
+The default palette is Absolute Dark: window #020304, sidebar #050608, sections #090B0E, row hover #11151B, inputs #010203, active accent #3B82F6, text #E6E8EC and secondary text #8A8F98. Sections use a faint white stroke at 94% transparency. The original Base/Primary/Accent customization API remains; each preset now supplies its own semantic surface colors.
 
 Controls are added to the latest section in a tab. `Section:CreateToggle(...)` also works for explicit grouping. Search only filters visibility; it never changes values. The title region smoothly drags the window on rendered frames; the movement listener stops after settling. K toggles visibility and the 36px flame-icon control reopens it, with a faint steady glow. Scaling and compact layout fit smaller viewports initially; dragging can move the body off-screen while leaving a reachable title strip. Popovers use the same logical coordinates. `OnClose` can connect the header Close action to your application's cleanup; otherwise Close destroys the UI.
 
-The ASCII renderer now only animates the boot screen: one shared RenderStepped connection, throttled to 18 updates per second, with bounded cell counts. The window body uses a faint static top-down wash instead of ambient glyphs, and buttons no longer carry glyph decorations.
+The ASCII renderer uses one shared RenderStepped connection, throttled to 18 updates per second, with bounded cell and ripple counts. The Matrix look is on by default: ambient glyphs fall behind the cards at about 0.70–0.82 transparency, and buttons carry a small glyph block. Pass `Matrix = false` to `CreateWindow` for a faint static wash and arrow buttons instead. The background stops while minimized, and its resources disconnect on unload.
 
 The owner's original white flame logo is preserved, as requested on 21 October. Its exact transparent PNG is embedded in the module and loaded with executor `writefile` plus `getcustomasset`/`getsynasset`; an E monogram is the fallback. No generated logo is used. Supply `LogoId` for your own published image instead. The original vector trace is [UI/Assets/eclipse-logo.svg](UI/Assets/eclipse-logo.svg).
 
@@ -146,3 +146,5 @@ Validation: 96 temporary checks passed for all six presets, live card/input bind
 ## 22 October premium polish — v1.6.0
 
 v1.6.0 layout and polish pass: row labels wrap onto a second line and grow the row instead of ending in an ellipsis. The ambient glyph field and the button glyph decorations are removed; a faint static wash replaces them. Section headers, rules and row content share one 16px inset. Sliders put the label and exact value (with a dimmer unit) on one line above a full-width track; the value is still editable on click. Off switches use a raised track with a hairline edge and a muted knob; the knob grows with a slight overshoot when turned on. Buttons are outlined, use a medium-weight label and an action arrow that turns accent and nudges on hover. Header icon buttons are borderless with hover surfaces (close hovers red), a hairline separates the header, and a "TIER / version" subtitle renders the tier as an accent pill. API, callbacks and saved values are unchanged.
+
+v1.6.1: the Matrix look is back by default: the ambient glyph field behind the cards and the glyph block on buttons, alongside the v1.6.0 layout and control polish. `Matrix = false` in `CreateWindow` keeps the plain wash and arrow buttons. Absolute Dark is now the default theme; `Theme = "Default"` (and the old aliases) resolve to it, and the previous charcoal palette is available as `"Charcoal"`. Sidebar icons are redrawn with rounded strokes and curves: house, eye, lightning bolt (farms) and gear, plus player, teleport pin, combat sword, info and misc icons matched by keyword in the tab name (for example "Auto Farms" or "Player ESP"); other tabs get a four-tile grid.

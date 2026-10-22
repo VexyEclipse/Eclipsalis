@@ -76,24 +76,23 @@ return function(Library, ctx)
         bind(row, "BackgroundColor3", "Input")
         ctx.wrapLabel(control, 48)
         label.Font = Enum.Font.GothamMedium
-        -- Buttons read as buttons: outlined surface, action arrow that turns accent on hover, press dip.
+        -- Buttons read as buttons: outlined surface with the Matrix glyph block (or an arrow when Matrix is off).
         local outline = ctx.stroke(row, "Border", .9)
-        local arrow = ctx.vectorIcon(row, "arrow", {AnchorPoint = Vector2.new(1, .5), Position = UDim2.new(1, -12, .5, 0),
-            Size = UDim2.fromOffset(14, 14), Role = "Secondary", ZIndex = label.ZIndex})
-        local function arrowRole(role)
-            for _, part in ipairs(arrow:GetChildren()) do
-                if part:IsA("Frame") then bind(part, "BackgroundColor3", role, true) end
-            end
+        if ctx.matrixEnabled() then
+            local matrix = new("Frame", {Name = "ButtonMatrix", BackgroundTransparency = 1,
+                AnchorPoint = Vector2.new(1, .5), Position = UDim2.new(1, -12, .5, 0),
+                Size = UDim2.fromOffset(24, 24), Active = false, ZIndex = label.ZIndex}, row)
+            local decoration = ctx.createAtmosphere(matrix, {Mode = "button", Columns = 3, Rows = 2,
+                GlyphSize = 8, ZIndex = label.ZIndex})
+            ctx.connect(row.Destroying, function() decoration:Destroy() end)
+        else
+            ctx.vectorIcon(row, "arrow", {AnchorPoint = Vector2.new(1, .5), Position = UDim2.new(1, -12, .5, 0),
+                Size = UDim2.fromOffset(14, 14), Role = "Secondary", ZIndex = label.ZIndex})
         end
         ctx.connect(row.MouseEnter, function()
-            if control.Disabled then return end
-            arrowRole("Accent"); tween(outline, {Transparency = .8}, .12)
-            tween(arrow, {Position = UDim2.new(1, -9, .5, 0)}, .15)
+            if not control.Disabled then tween(outline, {Transparency = .8}, .12) end
         end)
-        ctx.connect(row.MouseLeave, function()
-            arrowRole("Secondary"); tween(outline, {Transparency = .9}, .12)
-            tween(arrow, {Position = UDim2.new(1, -12, .5, 0)}, .15)
-        end)
+        ctx.connect(row.MouseLeave, function() tween(outline, {Transparency = .9}, .12) end)
         bind(label, "TextColor3", "Primary")
         ctx.connect(row.Activated, function()
             if not usable(control) then return end
