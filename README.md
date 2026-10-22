@@ -1,6 +1,6 @@
 # Eclipse UI
 
-A polished, compact Roblox interface for Eclipse. Version **1.6.5** uses near-black Absolute Dark surfaces, restrained blue active states, rounded switches and the original white flame logo. Built directly with Roblox GUI objects, with no external UI dependency.
+A polished, compact Roblox interface for Eclipse. Version **1.6.6** uses near-black Absolute Dark surfaces, restrained blue active states, rounded switches and the original white flame logo. Built directly with Roblox GUI objects, with no external UI dependency.
 
 ```lua
 local Eclipse = loadstring(game:HttpGet("https://raw.githubusercontent.com/VexyEclipse/Eclipsalis/main/EclipseUI.lua"))()
@@ -8,7 +8,7 @@ local Window = Eclipse:CreateWindow({
     Name = "Eclipse Hub",
     LoadingTitle = "ECLIPSE",
     LoadingSubtitle = "v1.4.1",
-    Subtitle = "v1.6.5",
+    Subtitle = "v1.6.6",
     Badge = "Premium",          -- title bar pill; see "Title bar pill" below
     BadgeColor = "#A855F7",
     Theme = "Absolute Dark",
@@ -49,6 +49,26 @@ Controls are added to the latest section in a tab. `Section:CreateToggle(...)` a
 The ASCII renderer uses one shared RenderStepped connection, throttled to 18 updates per second, with bounded cell and ripple counts. The Matrix look is on by default: ambient glyphs fall behind the cards at about 0.70–0.82 transparency, and buttons carry a small glyph block. Pass `Matrix = false` to `CreateWindow` for a faint static wash and arrow buttons instead. The background stops while minimized, and its resources disconnect on unload.
 
 The owner's original white flame logo is preserved, as requested on 21 October. Its exact transparent PNG is embedded in the module and loaded with executor `writefile` plus `getcustomasset`/`getsynasset`; an E monogram is the fallback. No generated logo is used. Supply `LogoId` for your own published image instead. The original vector trace is [UI/Assets/eclipse-logo.svg](UI/Assets/eclipse-logo.svg).
+
+## Mobile and small screens
+
+The window adapts to the device on its own; no options are needed.
+
+- **Fits before it shrinks.** On smaller screens the window first narrows and shortens (down to 400×280) at full text size, and only scales down below that. Desktop sizes are unchanged.
+- **Clears system UI.** The window stays inside the device safe area (notches and rounded corners) and, on touch screens, below the Roblox top bar, both when it opens and while dragging.
+- **Narrow screens** (window under 600 wide, e.g. phones held upright) switch to one card column; touch devices start with the sidebar collapsed to its icon rail.
+- **Larger touch targets** on touch-only devices: rows are at least 44 tall, sidebar tabs 40, and slider drag areas 24.
+- **No sticky hover.** Hover highlights only react to a mouse, so tapped rows and buttons don't stay lit.
+- **Scroll-safe sliders.** On touch, a slider only drags after a sideways swipe; swiping vertically over it scrolls the page, and a plain tap sets the value where you tapped.
+- The flame reopen button stays visible on touch devices and can be dragged anywhere.
+
+| Screen | Window | Scale |
+| --- | --- | --- |
+| 1920×1080 desktop | 660×420, two columns | 1.25 |
+| 1024×768 tablet | 660×420, two columns | 1.00 |
+| 844×390 phone, landscape | 660×308, two columns | 1.00 |
+| 740×360 phone, landscape | 660×280, two columns | 0.99 |
+| 390×844 phone, portrait | 402×420, one column | 0.92 |
 
 ## Title bar pill
 
@@ -205,3 +225,5 @@ Custom theme tables may set `Effect` to any of these names.
 v1.6.4: the sidebar collapse control uses Lucide `panel-left-close` / `panel-left-open`, so a chevron shows which way the sidebar will move. Switches glow with an accent neon bloom while on, buttons flash the same bloom when pressed, and sliders glow softly along the filled span, flaring with the thumb while hovered or dragged (`ctx.glow` now takes an optional color role). Preset names are spaced for display: Cyber Yellow, Amber Glow and Neon Cyan; `CyberYellow`, `AmberGlow` and `NeonCyan` still work.
 
 v1.6.5: the title bar pill is configurable from `CreateWindow`: `Badge` (text, `false`, or `{Text, Color, TextColor}`), `BadgeColor` and `BadgeTextColor`, plus `Window:SetBadge(...)` at runtime. See [Title bar pill](#title-bar-pill). Subtitles such as `"PREMIUM / v1.2"` still produce the pill automatically.
+
+v1.6.6: mobile support. The window fits the screen before scaling (phones keep near full-size text instead of about 0.8×), respects device safe areas and the Roblox top bar on touch screens, uses larger touch targets, ignores hover on touch, and sliders only drag on a sideways swipe so pages scroll freely. See [Mobile and small screens](#mobile-and-small-screens).

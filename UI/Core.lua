@@ -4,10 +4,14 @@ local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
-local Library = {Flags = {}, Version = "1.6.5", Name = "Eclipse UI"}
+local GuiService = game:GetService("GuiService")
+local Library = {Flags = {}, Version = "1.6.6", Name = "Eclipse UI"}
 local Tab = {}
 Tab.__index = Tab
 local WINDOW_WIDTH, WINDOW_HEIGHT = 660, 420
+local MIN_WIDTH, MIN_HEIGHT = 400, 280
+local NAV_HEIGHT = (UIS.TouchEnabled and not UIS.MouseEnabled) and 40 or 32
+local NAV_ICON_Y = (NAV_HEIGHT - 16) / 2
 local SIDEBAR_WIDTH, HEADER_HEIGHT = 148, 48
 local ctx = {Tab = Tab, UIS = UIS, fontMono = Enum.Font.Code, font = Enum.Font.Gotham, pad = 12}
 -- Bindings hold strong keys: Roblox may collect an Instance's Lua proxy from a weak table while the
@@ -70,12 +74,25 @@ function ctx.unscale(value) return value / (state.scale or 1) end
 function ctx.logicalPoint(position)
     return ctx.unscale(position - (state.stage and state.stage.AbsolutePosition or Vector2.zero))
 end
-function ctx.viewportMetrics(size)
-    local compact = size.X < 600
-    local width = compact and 400 or WINDOW_WIDTH
-    local preferred = math.clamp(math.min(size.X / 1280, size.Y / 720), 1, 1.25)
-    local scale = math.max(.1, math.min(preferred, (size.X - 24) / width, (size.Y - 24) / WINDOW_HEIGHT))
-    return scale, width, compact
+-- Phones and tablets without a mouse get larger touch targets and no hover states.
+ctx.touch = UIS.TouchEnabled and not UIS.MouseEnabled
+function ctx.touchInput()
+    return ctx.touch or UIS:GetLastInputType() == Enum.UserInputType.Touch
+end
+-- Fit the window to the screen before scaling it: it narrows and shortens down to 400x280 at full
+-- text size, and only scales below that. `topInset` reserves the Roblox top bar on touch screens.
+function ctx.viewportMetrics(size, topInset)
+    local availableX, availableY = size.X, math.max(1, size.Y - (topInset or 0))
+    local scale = math.clamp(math.min(size.X / 1280, size.Y / 720), 1, 1.25)
+    local width = math.min(WINDOW_WIDTH, availableX / scale - 24)
+    local height = math.min(WINDOW_HEIGHT, availableY / scale - 24)
+    if width < MIN_WIDTH or height < MIN_HEIGHT then
+        scale = math.max(.1, math.min(scale, (availableX - 24) / MIN_WIDTH, (availableY - 24) / MIN_HEIGHT))
+        width = math.clamp(availableX / scale - 24, MIN_WIDTH, WINDOW_WIDTH)
+        height = math.clamp(availableY / scale - 24, MIN_HEIGHT, WINDOW_HEIGHT)
+    end
+    width, height = math.floor(width), math.floor(height)
+    return scale, width, width < 600, height
 end
 function ctx.addCleanup(callback) table.insert(state.cleanups, callback) end
 function ctx.ripple(position, strength)
@@ -579,7 +596,7 @@ function ctx.row(tab, rawOptions, height)
         self.Frame:Destroy(); queueReflow(tab)
     end
     local function hover(on)
-        if control.Disabled then return end
+        if control.Disabled or (on and ctx.touchInput()) then return end
         ctx.bind(frame, "BackgroundColor3", on and "Hover" or control.SurfaceRole or "Section", true)
     end
     ctx.connect(frame.MouseEnter, function() hover(true) end)
@@ -605,7 +622,7 @@ function ctx.wrapLabel(control, reserved, minimum)
     label.LineHeight = 1.1
     local function resize()
         if control.Destroyed or not label.Parent then return end
-        local height = math.max(minimum or 36, math.ceil(ctx.unscale(label.AbsoluteSize.Y)) + 16)
+        local height = math.max(minimum or (ctx.touch and 44 or 36), math.ceil(ctx.unscale(label.AbsoluteSize.Y)) + 16)
         if row.Size.Y.Offset ~= height then row.Size = UDim2.new(1, 0, 0, height) end
     end
     ctx.connect(label:GetPropertyChangedSignal("AbsoluteSize"), resize)
@@ -785,6 +802,7 @@ local function topButton(parent, name, x, callback)
     end
     -- Borderless icon buttons: a soft surface appears on hover only.
     ctx.connect(button.MouseEnter, function()
+        if ctx.touchInput() then return end
         ctx.tween(button, {BackgroundTransparency = name == "close" and .2 or 0}, .12)
         iconRole(name == "close" and function() return Color3.new(1, 1, 1) end or "Primary")
     end)
@@ -813,9 +831,15 @@ function Library:CreateWindow(rawOptions)
         local size = screen.AbsoluteSize
         return size.X > 0 and size.Y > 0 and size or (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720))
     end
+    -- Keep clear of notches and rounded corners; on touch screens also clear the Roblox top bar.
+    pcall(function() screen.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets end)
+    local function topInset()
+        if not ctx.touch then return 0 end
+        local ok, inset = pcall(function() return GuiService:GetGuiInset() end)
+        return ok and typeof(inset) == "Vector2" and inset.Y or 0
+    end
     local initialViewport = physicalViewport()
-    state.scale, state.width, state.compact = ctx.viewportMetrics(initialViewport)
-    state.height = WINDOW_HEIGHT
+    state.scale, state.width, state.compact, state.height = ctx.viewportMetrics(initialViewport, topInset())
     local stage = ctx.new("Frame", {Name = "ScaledInterface", BackgroundTransparency = 1,
         Size = UDim2.fromOffset(initialViewport.X / state.scale, initialViewport.Y / state.scale)}, screen)
     state.stage = stage
@@ -1008,12 +1032,14 @@ function Library:CreateWindow(rawOptions)
     local function constrainWindow(position)
         local size = viewport()
         -- Leave a reachable title strip while permitting most of the body off-screen.
+        local top = ctx.touch and ctx.unscale(topInset()) or -24
         return Vector2.new(math.clamp(position.X, 64 - (state.width - 120), math.max(0, size.X - 64)),
-            math.clamp(position.Y, -24, math.max(0, size.Y - 24)))
+            math.clamp(position.Y, top, math.max(top, size.Y - 24)))
     end
     local function place(reset)
         local size = viewport()
-        local position = reset and Vector2.new((size.X - state.width) / 2, (size.Y - state.height) / 2)
+        local top = ctx.unscale(topInset())
+        local position = reset and Vector2.new((size.X - state.width) / 2, top + (size.Y - top - state.height) / 2)
             or Vector2.new(root.Position.X.Offset, root.Position.Y.Offset)
         position = constrainWindow(position)
         root.Position = UDim2.fromOffset(position.X, position.Y)
@@ -1083,7 +1109,7 @@ function Library:CreateWindow(rawOptions)
         drawCollapseIcon()
         for _, tab in ipairs(state.tabs) do
             tab.NavLabel.Visible = not state.collapsed
-            tab.Icon.Position = state.collapsed and UDim2.new(.5, -8, 0, 8) or UDim2.fromOffset(12, 8)
+            tab.Icon.Position = state.collapsed and UDim2.new(.5, -8, 0, NAV_ICON_Y) or UDim2.fromOffset(12, NAV_ICON_Y)
             queueReflow(tab)
         end
     end
@@ -1140,17 +1166,17 @@ function Library:CreateWindow(rawOptions)
         tab.Empty = ctx.text(page, "No matching controls", {Position = UDim2.fromOffset(12, 12),
             Size = UDim2.new(1, -24, 0, 32), TextSize = 14, TextTransparency = 0, Visible = false, ZIndex = 4})
         local button = ctx.new("TextButton", {Name = name, Text = "", AutoButtonColor = false,
-            Size = UDim2.new(1, 0, 0, 32), LayoutOrder = #state.tabs + 1, ZIndex = 7}, nav)
+            Size = UDim2.new(1, 0, 0, NAV_HEIGHT), LayoutOrder = #state.tabs + 1, ZIndex = 7}, nav)
         ctx.bind(button, "BackgroundColor3", "Accent"); button.BackgroundTransparency = 1
         ctx.round(button, 6); tab.Button = button
         local asset = tabOptions.Icon ~= 4483362458 and ctx.iconAsset(tabOptions.Icon) or nil
         if asset then
             local iconImage = ctx.new("ImageLabel", {BackgroundTransparency = 1, Image = asset,
-                Position = UDim2.fromOffset(12, 8), Size = UDim2.fromOffset(16, 16), ZIndex = 8}, button)
+                Position = UDim2.fromOffset(12, NAV_ICON_Y), Size = UDim2.fromOffset(16, 16), ZIndex = 8}, button)
             ctx.bind(iconImage, "ImageColor3", "Primary"); tab.Icon = iconImage
         else tab.Icon = ctx.vectorIcon(button, type(tabOptions.Icon) == "string" and tabOptions.Icon or name,
-            {Position = UDim2.fromOffset(12, 8), Size = UDim2.fromOffset(16, 16), ZIndex = 8}) end
-        tab.Icon.Position = state.collapsed and UDim2.new(.5, -8, 0, 8) or UDim2.fromOffset(12, 8)
+            {Position = UDim2.fromOffset(12, NAV_ICON_Y), Size = UDim2.fromOffset(16, 16), ZIndex = 8}) end
+        tab.Icon.Position = state.collapsed and UDim2.new(.5, -8, 0, NAV_ICON_Y) or UDim2.fromOffset(12, NAV_ICON_Y)
         tab.NavLabel = ctx.text(button, name, {Position = UDim2.fromOffset(40, 0), Size = UDim2.new(1, -48, 1, 0),
             Font = ctx.font, TextSize = 14, TextTruncate = Enum.TextTruncate.AtEnd, Visible = not state.collapsed, ZIndex = 8})
         tab.Indicator = ctx.new("Frame", {Name = "ActiveIndicator", Size = UDim2.fromOffset(2, 16),
@@ -1170,7 +1196,7 @@ function Library:CreateWindow(rawOptions)
         stopWindowDrag(); closePopup()
         local physical = physicalViewport()
         local wasCompact = state.compact
-        state.scale, state.width, state.compact = ctx.viewportMetrics(physical)
+        state.scale, state.width, state.compact, state.height = ctx.viewportMetrics(physical, topInset())
         uiScale.Scale = state.scale
         stage.Size = UDim2.fromOffset(physical.X / state.scale, physical.Y / state.scale)
         root.Size = UDim2.fromOffset(state.width, state.height)

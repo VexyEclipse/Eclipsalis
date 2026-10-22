@@ -90,7 +90,7 @@ return function(Library, ctx)
                 Size = UDim2.fromOffset(14, 14), Role = "Secondary", ZIndex = label.ZIndex})
         end
         ctx.connect(row.MouseEnter, function()
-            if not control.Disabled then tween(outline, {Transparency = .8}, .12) end
+            if not control.Disabled and not ctx.touchInput() then tween(outline, {Transparency = .8}, .12) end
         end)
         ctx.connect(row.MouseLeave, function() tween(outline, {Transparency = .9}, .12) end)
         bind(label, "TextColor3", "Primary")
@@ -229,14 +229,14 @@ return function(Library, ctx)
             bind(unit, "TextColor3", "Secondary")
         end
         local hit = new("TextButton", {
-            Name = "SliderDrag", Position = UDim2.fromOffset(12, 28), Size = UDim2.new(1, -24, 0, 14), Text = "", BackgroundTransparency = 1,
+            Name = "SliderDrag", Position = UDim2.fromOffset(12, 28), Size = UDim2.new(1, -24, 0, ctx.touch and 24 or 14), Text = "", BackgroundTransparency = 1,
             BorderSizePixel = 0, AutoButtonColor = false, Active = true,
         }, row)
         local function layout()
             if control.Destroyed or not label.Parent then return end
             local labelHeight = math.max(16, math.ceil(ctx.unscale(label.AbsoluteSize.Y)))
             hit.Position = UDim2.fromOffset(12, 8 + labelHeight + 4)
-            local height = labelHeight + 34
+            local height = labelHeight + (ctx.touch and 44 or 34)
             if row.Size.Y.Offset ~= height then row.Size = UDim2.new(1, 0, 0, height) end
         end
         ctx.connect(label:GetPropertyChangedSignal("AbsoluteSize"), layout)
@@ -266,7 +266,7 @@ return function(Library, ctx)
             ctx.tween(thumb, {Size = UDim2.fromOffset(size and 16 or 12, size and 16 or 12)}, .15)
             thumbNeon:SetActive(size)
         end
-        ctx.connect(hit.MouseEnter, function() hovered = true; sizeThumb() end)
+        ctx.connect(hit.MouseEnter, function() if not ctx.touchInput() then hovered = true; sizeThumb() end end)
         ctx.connect(hit.MouseLeave, function() hovered = false; sizeThumb() end)
         local function formatValue()
             local numeric = numberText(control.CurrentValue)
@@ -292,8 +292,19 @@ return function(Library, ctx)
             if first == control then return set(second, third, true) end
             return set(first, second, true)
         end
-        local function move(position)
+        -- Touch drags start only on a sideways swipe, so scrolling past a slider never changes it;
+        -- a tap without movement still sets the value where it landed.
+        local touchStart, touchIntent
+        local function move(position, input)
             if not usable(control) or track.AbsoluteSize.X <= 0 then return end
+            if input and input.UserInputType == Enum.UserInputType.Touch and touchIntent ~= "drag" then
+                if not touchStart then touchStart, touchIntent = position, nil; return end
+                if touchIntent == "scroll" then return end
+                local delta = position - touchStart
+                if math.abs(delta.Y) > 8 and math.abs(delta.Y) >= math.abs(delta.X) then touchIntent = "scroll"; return end
+                if math.abs(delta.X) <= 8 then return end
+                touchIntent = "drag"
+            end
             if not dragging then
                 dragging = true
                 sizeThumb()
@@ -302,7 +313,11 @@ return function(Library, ctx)
             local value = snap(minimum + (maximum - minimum) * ratio)
             if value ~= nil and value ~= control.CurrentValue then set(value, false, false) end
         end
-        ctx.drag(hit, move, function()
+        ctx.drag(hit, move, function(position, input)
+            if touchStart and touchIntent == nil and input and input.UserInputType == Enum.UserInputType.Touch then
+                touchIntent = "drag"; move(position, input)
+            end
+            touchStart, touchIntent = nil, nil
             dragging = false
             if not control.Destroyed and ctx.alive() then sizeThumb() end
             if usable(control) then ctx.saveSoon() end
