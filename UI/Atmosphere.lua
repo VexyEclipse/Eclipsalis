@@ -77,7 +77,7 @@ return function(Library, ctx)
             local phase = math.floor(now * (energy > 0.2 and 13 or 2.4)
                 + cell.Column * 0.71 + cell.Row * 1.31 + wave * 1.5)
             local glyph = present and glyphs[phase % #glyphs + 1] or ""
-            local transparency = quantize(math.clamp(0.91 + wave * 0.018 - energy * 0.52, 0.36, 0.94))
+            local transparency = quantize(math.clamp(0.76 + wave * 0.055 - energy * 0.38, 0.32, 0.84))
             assign(cell.Label, "Text", glyph)
             assign(cell.Label, "TextTransparency", transparency)
             assign(cell.Label, "TextStrokeTransparency", quantize(1 - energy * 0.25))
@@ -143,11 +143,11 @@ return function(Library, ctx)
                 local label = ctx.text(frame, "", {Name = "Glyph", Font = ctx.fontMono, TextSize = glyphSize,
                     AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(x, y),
                     Size = UDim2.fromOffset(glyphSize + 3, glyphSize + 6), TextWrapped = false,
-                    TextTransparency = 0.91, TextStrokeTransparency = 1,
+                    TextTransparency = 0.76, TextStrokeTransparency = 1,
                     TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center,
                     ZIndex = z, Active = false})
-                ctx.bind(label, "TextColor3", "Accent")
-                ctx.bind(label, "TextStrokeColor3", "Accent")
+                ctx.bind(label, "TextColor3", "Secondary")
+                ctx.bind(label, "TextStrokeColor3", "Secondary")
                 table.insert(handle.Cells, {Label = label, X = x, Y = y, Column = column, Row = row,
                     RevealAt = ((row - 1) * columns + column) / (columns * rows) * 0.65})
             end

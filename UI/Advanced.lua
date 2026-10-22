@@ -23,66 +23,58 @@ return function(Library, ctx)
     local function field(parent, properties)
         properties = properties or {}
         properties.ClearTextOnFocus = false
-        properties.Font = ctx.fontMono
-        properties.TextSize = properties.TextSize or 11
+        properties.Font = properties.Font or ctx.font
+        properties.TextSize = properties.TextSize or 13
         properties.BorderSizePixel = 0
         local box = ctx.new("TextBox", properties, parent)
         local focused = false
-        ctx.round(box, 4)
-        local glow = ctx.glow(box, 4)
-        ctx.bind(box, "BackgroundColor3", function(theme) return theme.Base:Lerp(focused and theme.Accent or theme.Primary, focused and 0.14 or 0.08) end)
+        ctx.round(box, 6)
+        local focusBorder = ctx.stroke(box, "Primary", .88)
+        ctx.bind(box, "BackgroundColor3", "Input")
         ctx.bind(box, "TextColor3", "Primary")
-        ctx.bind(box, "PlaceholderColor3", "Primary")
+        ctx.bind(box, "PlaceholderColor3", "Secondary")
         ctx.connect(box.Focused, function()
             focused = true
-            ctx.tween(box, {BackgroundColor3 = ctx.theme().Base:Lerp(ctx.theme().Accent, 0.14)}, 0.14)
-            glow:SetActive(true, true)
+            ctx.tween(box, {BackgroundColor3 = ctx.colors.Input}, 0.14)
+            ctx.tween(focusBorder, {Transparency = .45}, .14)
         end)
         ctx.connect(box.FocusLost, function()
             focused = false
-            ctx.tween(box, {BackgroundColor3 = ctx.theme().Base:Lerp(ctx.theme().Primary, 0.08)}, 0.14)
-            glow:SetActive(false, true)
+            ctx.tween(box, {BackgroundColor3 = ctx.colors.Input}, 0.14)
+            ctx.tween(focusBorder, {Transparency = .88}, .14)
         end)
         return box
     end
 
     local function trigger(control, width)
         control.Frame.Size = UDim2.new(1, 0, 0, 34)
-        control.Label.Size = UDim2.new(1, -(width + 28), 1, 0)
-        control.Label.Position = UDim2.fromOffset(10, 0)
+        control.Label.Size = UDim2.new(1, -(width + 36), 1, 0)
+        control.Label.Position = UDim2.fromOffset(12, 0)
         control.Label.AutomaticSize = Enum.AutomaticSize.None
         control.Label.TextWrapped = false
         control.Label.TextTruncate = Enum.TextTruncate.AtEnd
         control.Label.TextYAlignment = Enum.TextYAlignment.Center
-        control.Label.TextSize = 11
+        control.Label.TextSize = 14
         local button = ctx.new("TextButton", {
-            Name = "Control", AnchorPoint = Vector2.new(1, .5), Position = UDim2.new(1, -10, .5, 0),
-            Size = UDim2.fromOffset(width, 26), BackgroundTransparency = 0,
-            AutoButtonColor = false, BorderSizePixel = 0, Font = ctx.fontMono, TextSize = 10, Text = "",
+            Name = "Control", AnchorPoint = Vector2.new(1, .5), Position = UDim2.new(1, -12, .5, 0),
+            Size = UDim2.fromOffset(width, 28), BackgroundTransparency = 0,
+            AutoButtonColor = false, BorderSizePixel = 0, Font = ctx.font, TextSize = 13, Text = "",
             TextTruncate = Enum.TextTruncate.AtEnd,
         }, control.Frame)
-        ctx.round(button, 4)
-        local badgeActive, hovered = false, false
-        local glow = ctx.glow(button, 4)
-        ctx.bind(button, "BackgroundColor3", function(theme) return theme.Base:Lerp((badgeActive or hovered) and theme.Accent or theme.Primary, (badgeActive or hovered) and 0.14 or 0.08) end)
+        ctx.round(button, 6)
+        local badgeActive = false
+        local outline = ctx.stroke(button, "Primary", .9)
+        ctx.bind(button, "BackgroundColor3", "Input")
         ctx.bind(button, "TextColor3", "Primary")
-        local function refresh(animate)
-            local on = badgeActive or hovered
-            ctx.tween(button, {BackgroundColor3 = ctx.theme().Base:Lerp(on and ctx.theme().Accent or ctx.theme().Primary, on and 0.14 or 0.08)}, animate == false and 0 or 0.14)
-            glow:SetActive(on, animate ~= false)
+        local function setActive(value, animate)
+            badgeActive = value == true
+            ctx.bind(outline, "Color", badgeActive and "Accent" or "Primary")
+            ctx.tween(outline, {Transparency = badgeActive and .55 or .9}, animate == false and 0 or .14)
         end
-        ctx.connect(button.MouseEnter, function() hovered = true; refresh(true) end)
-        ctx.connect(button.MouseLeave, function() hovered = false; refresh(true) end)
-        local function setActive(value, animate) badgeActive = value == true; refresh(animate) end
-        return button, glow, setActive
+        return button, nil, setActive
     end
 
-    local function pulse(button, glow, input)
-        local position = button.AbsolutePosition + button.AbsoluteSize * 0.5
-        if input and ctx.isPointer(input) then position = Vector2.new(input.Position.X, input.Position.Y) end
-        ctx.ripple(position, 0.8)
-        if glow then glow:Pulse() end
-    end
+    local function pulse() end -- No hover or click blooms on expanded controls.
 
     local function cleanOptions(values)
         local result, found = {}, {}
@@ -100,11 +92,11 @@ return function(Library, ctx)
         control.Type = "Dropdown"
         control.Values = cleanOptions(options.Options)
         control.MultipleOptions = options.MultipleOptions == true
-        local button, badgeGlow, setBadgeActive = trigger(control, 110)
+        local button, badgeGlow, setBadgeActive = trigger(control, 64)
         button.TextXAlignment = Enum.TextXAlignment.Left
         ctx.new("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 23)}, button)
         local chevron = ctx.vectorIcon(button, "chevron", {
-            AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -7, 0.5, 0), Size = UDim2.fromOffset(10, 10),
+            AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.fromOffset(16, 16),
         })
         local panel, closePanel, list, searchBox
         local rows, selected = {}, {}
@@ -146,7 +138,6 @@ return function(Library, ctx)
                 entry.Marker.BackgroundTransparency = selected[name] and 0 or 1
                 entry.Button.BackgroundTransparency = selected[name] and 0 or 1
                 entry.Label.TextTransparency = selected[name] and 0 or 0.22
-                entry.Glow:SetActive(selected[name] == true, true)
             end
         end
 
@@ -167,25 +158,24 @@ return function(Library, ctx)
             local query = searchBox and string.lower(searchBox.Text) or ""
             for index, name in ipairs(control.Values) do
                 local item = ctx.new("TextButton", {
-                    Name = "Option", LayoutOrder = index, Size = UDim2.new(1, -4, 0, 32),
+                    Name = "Option", LayoutOrder = index, Size = UDim2.new(1, -4, 0, 34),
                     BackgroundTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false,
                     Text = "", Visible = query == "" or string.find(string.lower(name), query, 1, true) ~= nil,
                     ZIndex = panel.ZIndex + 2,
                 }, list)
-                ctx.round(item, 4)
-                ctx.bind(item, "BackgroundColor3", function(theme) return theme.Base:Lerp(theme.Accent, 0.14) end)
+                ctx.round(item, 6)
+                ctx.bind(item, "BackgroundColor3", "Hover")
                 local marker = ctx.new("Frame", {
-                    Position = UDim2.new(0, 3, 0.5, -8), Size = UDim2.fromOffset(2, 16),
+                    Position = UDim2.new(1, -13, 0.5, -3), Size = UDim2.fromOffset(6, 6),
                     BorderSizePixel = 0, ZIndex = panel.ZIndex + 3,
                 }, item)
                 ctx.bind(marker, "BackgroundColor3", "Accent")
-                ctx.round(marker, 1)
-                local selectionGlow = ctx.glow(marker, 1, 0.75)
+                ctx.round(marker, 3)
                 local label = ctx.text(item, name, {
-                    Position = UDim2.fromOffset(13, 0), Size = UDim2.new(1, -23, 1, 0),
-                    TextSize = 11, TextTruncate = Enum.TextTruncate.AtEnd, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = panel.ZIndex + 3,
+                    Position = UDim2.fromOffset(12, 0), Size = UDim2.new(1, -30, 1, 0),
+                    TextSize = 14, TextTruncate = Enum.TextTruncate.AtEnd, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = panel.ZIndex + 3,
                 })
-                rows[name] = {Button = item, Marker = marker, Label = label, Glow = selectionGlow}
+                rows[name] = {Button = item, Marker = marker, Label = label}
                 ctx.connect(item.Activated, function(input)
                     if not active(control) then return end
                     pulse(item, badgeGlow, input)
@@ -245,8 +235,8 @@ return function(Library, ctx)
             if not active(control) then return end
             if isOpen() then close(); return end
             pulse(button, badgeGlow, input)
-            local height = math.min(242, 46 + math.max(1, #control.Values) * 32)
-            panel, closePanel = ctx.popup(control, 252, height)
+            local height = math.min(268, 52 + math.max(1, #control.Values) * 36)
+            panel, closePanel = ctx.popup(control, math.clamp(ctx.unscale(control.Frame.AbsoluteSize.X), 220, 280), height)
             setBadgeActive(true, true)
             ctx.tween(chevron, {Rotation = 180}, 0.16)
             local openedPanel = panel
@@ -258,25 +248,31 @@ return function(Library, ctx)
                     ctx.tween(chevron, {Rotation = 0}, 0.16)
                 end
             end)
-            local fullSize = panel.Size
-            panel.Size = UDim2.new(fullSize.X.Scale, fullSize.X.Offset, 0, 0)
-            ctx.spring(panel, {Size = fullSize}, 0.2)
-            searchBox = field(panel, {
-                Name = "Search", Text = "", PlaceholderText = "Search options",
-                Position = UDim2.fromOffset(8, 8), Size = UDim2.new(1, -16, 0, 26),
-                TextXAlignment = Enum.TextXAlignment.Left, ZIndex = panel.ZIndex + 2,
-            })
-            ctx.new("UIPadding", {PaddingLeft = UDim.new(0, 26), PaddingRight = UDim.new(0, 8)}, searchBox)
-            ctx.vectorIcon(searchBox, "search", {Position = UDim2.new(0, 8, 0.5, -5), Size = UDim2.fromOffset(10, 10), ZIndex = panel.ZIndex + 3})
+            local caption = ctx.text(panel, control.Name, {Position = UDim2.fromOffset(14, 8),
+                Size = UDim2.new(1, -58, 0, 26), TextSize = 14, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = panel.ZIndex + 2})
+            searchBox = field(panel, {Name = "Search", Text = "", PlaceholderText = "Filter options",
+                Position = UDim2.fromOffset(10, 8), Size = UDim2.new(1, -54, 0, 26), Visible = false,
+                TextXAlignment = Enum.TextXAlignment.Left, ZIndex = panel.ZIndex + 2})
+            ctx.new("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)}, searchBox)
+            local searchToggle = ctx.new("TextButton", {Name = "SearchOptions", Text = "", AutoButtonColor = false,
+                AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 8), Size = UDim2.fromOffset(26, 26),
+                ZIndex = panel.ZIndex + 2}, panel)
+            ctx.round(searchToggle, 7)
+            ctx.bind(searchToggle, "BackgroundColor3", "Input")
+            ctx.vectorIcon(searchToggle, "search", {Position = UDim2.fromOffset(6, 6), Size = UDim2.fromOffset(14, 14), ZIndex = panel.ZIndex + 3})
+            ctx.connect(searchToggle.Activated, function()
+                searchBox.Visible = not searchBox.Visible; caption.Visible = not searchBox.Visible
+                if searchBox.Visible then searchBox:CaptureFocus() else searchBox.Text = ""; searchBox:ReleaseFocus() end
+            end)
             list = ctx.new("ScrollingFrame", {
                 Name = "Options", BackgroundTransparency = 1, BorderSizePixel = 0,
-                Position = UDim2.fromOffset(6, 40), Size = UDim2.new(1, -12, 1, -46),
+                Position = UDim2.fromOffset(8, 44), Size = UDim2.new(1, -16, 1, -52),
                 ScrollBarThickness = 2, AutomaticCanvasSize = Enum.AutomaticSize.Y,
                 CanvasSize = UDim2.new(), ScrollingDirection = Enum.ScrollingDirection.Y,
                 ZIndex = panel.ZIndex + 1,
             }, panel)
             ctx.bind(list, "ScrollBarImageColor3", "Accent")
-            ctx.new("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder}, list)
+            ctx.new("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4)}, list)
             fillList()
             ctx.connect(searchBox:GetPropertyChangedSignal("Text"), function()
                 if not isOpen() then return end
@@ -341,12 +337,14 @@ return function(Library, ctx)
         control.HoldToInteract = options.HoldToInteract == true or options.Hold == true
         local threshold = tonumber(options.HoldThreshold)
         threshold = finite(threshold) and math.max(0, threshold) or (options.Hold == true and 0.2 or 0)
-        local button, badgeGlow, setBadgeActive = trigger(control, 106)
+        local button, badgeGlow, setBadgeActive = trigger(control, 28)
+        button.Font = ctx.fontMono
+        button.TextXAlignment = Enum.TextXAlignment.Center
         local held, capturing, pressed, pressToken = false, false, false, 0
         local capturedActivation
         local owned = {}
         local function render()
-            button.Text = capturing and "Press key" or string.upper(control.CurrentKeybind)
+            button.Text = capturing and "..." or string.upper(control.CurrentKeybind)
             button.TextTransparency = capturing and 0 or 0.10
             setBadgeActive(capturing or held, true)
         end
@@ -470,7 +468,7 @@ return function(Library, ctx)
         local control = ctx.row(self, options, 34)
         control.Type = "ColorPicker"
         control.Color = toColor(options.Color or options.CurrentValue) or ctx.theme().Accent
-        local button, badgeGlow, setBadgeActive = trigger(control, 106)
+        local button, badgeGlow, setBadgeActive = trigger(control, 64)
         button.TextXAlignment = Enum.TextXAlignment.Left
         ctx.new("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 28)}, button)
         local swatch = ctx.new("Frame", {
@@ -535,7 +533,7 @@ return function(Library, ctx)
             local matrixHeight = math.max(40, panel.Size.Y.Offset - 140)
             ctx.text(panel, "Color", {
                 Position = UDim2.fromOffset(12, 6), Size = UDim2.new(1, -24, 0, 20),
-                TextSize = 11, TextTransparency = 0.25, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = z,
+                TextSize = 14, TextTransparency = 0.25, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = z,
             })
             matrix = ctx.new("Frame", {
                 Name = "SaturationValue", Position = UDim2.fromOffset(12, 32), Size = UDim2.new(1, -24, 0, matrixHeight),
@@ -582,15 +580,15 @@ return function(Library, ctx)
             ctx.bind(hueCursor, "BackgroundColor3", "Primary")
             ctx.stroke(hueCursor, "Base", 0)
             hexField = field(panel, {
-                Name = "Hex", Text = "", Position = UDim2.fromOffset(12, matrixHeight + 90),
+                Name = "Hex", Font = ctx.fontMono, Text = "", Position = UDim2.fromOffset(12, matrixHeight + 90),
                 Size = UDim2.new(0.37, -12, 0, 26), ZIndex = z,
             })
-            ctx.text(panel, "HEX", {Position = UDim2.fromOffset(12, matrixHeight + 72), Size = UDim2.fromOffset(70, 16), Font = ctx.fontMono, TextSize = 9, TextTransparency = 0.4, ZIndex = z})
+            ctx.text(panel, "HEX", {Position = UDim2.fromOffset(12, matrixHeight + 72), Size = UDim2.fromOffset(70, 16), Font = ctx.font, TextSize = 13, TextTransparency = 0.4, ZIndex = z})
             for index, name in ipairs({"R", "G", "B"}) do
                 local x = 0.37 + (index - 1) * 0.21
-                local box = field(panel, {Name = name, Text = "", Position = UDim2.new(x, 0, 0, matrixHeight + 90), Size = UDim2.new(0.21, -12, 0, 26), ZIndex = z})
+                local box = field(panel, {Name = name, Font = ctx.fontMono, Text = "", Position = UDim2.new(x, 0, 0, matrixHeight + 90), Size = UDim2.new(0.21, -12, 0, 26), ZIndex = z})
                 rgbFields[index] = box
-                ctx.text(panel, name, {Position = UDim2.new(x, 0, 0, matrixHeight + 72), Size = UDim2.fromOffset(36, 16), Font = ctx.fontMono, TextSize = 9, TextTransparency = 0.4, ZIndex = z})
+                ctx.text(panel, name, {Position = UDim2.new(x, 0, 0, matrixHeight + 72), Size = UDim2.fromOffset(36, 16), Font = ctx.font, TextSize = 13, TextTransparency = 0.4, ZIndex = z})
                 ctx.connect(box.FocusLost, function()
                     if not active(control) or not panel or not panel.Parent then return end
                     local value = tonumber(box.Text)
@@ -674,22 +672,11 @@ return function(Library, ctx)
             BorderSizePixel = 0, AutoButtonColor = false, Font = Enum.Font.GothamMedium, TextSize = 11,
             Text = tostring(action.Text or action.Name or action.Title or "Continue"), TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = z,
         }, parent)
-        ctx.round(button, 4)
-        local hovered = false
-        local glow = ctx.glow(button, 4)
-        ctx.bind(button, "BackgroundColor3", function(theme) return theme.Base:Lerp(hovered and theme.Accent or theme.Primary, hovered and 0.14 or 0.08) end)
+        ctx.round(button, 6)
+        ctx.bind(button, "BackgroundColor3", "Input")
         ctx.bind(button, "TextColor3", "Primary")
-        ctx.connect(button.MouseEnter, function()
-            hovered = true
-            ctx.tween(button, {BackgroundColor3 = ctx.theme().Base:Lerp(ctx.theme().Accent, 0.14)}, 0.14)
-            glow:SetActive(true, true)
-        end)
-        ctx.connect(button.MouseLeave, function()
-            hovered = false
-            ctx.tween(button, {BackgroundColor3 = ctx.theme().Base:Lerp(ctx.theme().Primary, 0.08)}, 0.14)
-            glow:SetActive(false, true)
-        end)
-        ctx.connect(button.Activated, function(input) pulse(button, glow, input); callback() end)
+        ctx.stroke(button, "Secondary", .94)
+        ctx.connect(button.Activated, callback)
         return button
     end
 
@@ -717,7 +704,7 @@ return function(Library, ctx)
             Name = "Toast", LayoutOrder = notificationCount, Size = UDim2.new(1, 0, 0, height),
             BorderSizePixel = 0, BackgroundTransparency = 0.03, ClipsDescendants = true, ZIndex = 151,
         }, notificationStack)
-        ctx.bind(toast, "BackgroundColor3", function(theme) return theme.Base:Lerp(theme.Primary, 0.06) end)
+        ctx.bind(toast, "BackgroundColor3", "Section")
         ctx.round(toast, 6)
         ctx.stroke(toast, "Primary", 0.92)
         local handle = {Frame = toast, Closed = false}
@@ -754,7 +741,7 @@ return function(Library, ctx)
         ctx.connect(dismiss.Activated, close)
         ctx.text(toast, content, {
             Position = UDim2.fromOffset(14, 38), Size = UDim2.new(1, -28, 1, -(#actions > 0 and 90 or 52)),
-            TextSize = 11, TextTransparency = 0.25, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left,
+            TextSize = 14, TextTransparency = 0.25, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left,
             TextYAlignment = Enum.TextYAlignment.Top, ZIndex = 152,
         })
         if #actions > 0 then
@@ -796,10 +783,9 @@ return function(Library, ctx)
             Size = UDim2.new(1, -36, 0, 278), BorderSizePixel = 0, ZIndex = 241, Active = true,
         }, overlay)
         ctx.new("UISizeConstraint", {MaxSize = Vector2.new(430, 278)}, card)
-        ctx.bind(card, "BackgroundColor3", function(theme) return theme.Base:Lerp(theme.Primary, 0.04) end)
+        ctx.bind(card, "BackgroundColor3", "Section")
         ctx.round(card, 6)
-        ctx.stroke(card, "Primary", 0.9)
-        ctx.glow(card, 6, 0.75):SetActive(true, true)
+        ctx.stroke(card, "White", .94)
         ctx._modalOpen = (ctx._modalOpen or 0) + 1
         if ctx._keybindCapture and ctx._keybindCapture.CancelCapture then ctx._keybindCapture.CancelCapture() end
         local handle, escapeConnection, sizeConnection = {Frame = card, Closed = false}, nil, nil
@@ -810,7 +796,7 @@ return function(Library, ctx)
         end
         local function fitDialog()
             if not card.Parent then return end
-            local available = overlay.AbsoluteSize
+            local available = ctx.unscale(overlay.AbsoluteSize)
             local height = math.min(278, math.max(150, available.Y - 32))
             card.Size = UDim2.new(1, -36, 0, height)
         end
@@ -829,9 +815,8 @@ return function(Library, ctx)
         end
         handle.Close, handle.Dismiss, handle.Destroy = close, close, close
         local titleBar = ctx.new("Frame", {Position = UDim2.fromOffset(16, 22), Size = UDim2.fromOffset(2, 14), ZIndex = 242}, card)
-        ctx.bind(titleBar, "BackgroundColor3", "Accent")
+        ctx.bind(titleBar, "BackgroundColor3", "Secondary")
         ctx.round(titleBar, 1)
-        ctx.glow(titleBar, 1, 0.7):SetActive(true, false)
         ctx.text(card, tostring(options.Title or "Eclipse"), {
             Position = UDim2.fromOffset(27, 15), Size = UDim2.new(1, -47, 0, 30),
             TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left,

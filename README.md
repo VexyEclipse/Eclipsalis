@@ -1,13 +1,13 @@
 # Eclipse UI
 
-A compact modern interface for Eclipse. Black, white and blue panels, rounded cards, subtle steady accents, sliding pill switches and the original Eclipse flame logo. Version **1.3.2** (22 October) restores the larger original window and two columns of grouped sections. Built directly with Roblox GUI objects, with no external UI dependency.
+A polished, compact Roblox interface for Eclipse. Version **1.4.0** uses charcoal surfaces, restrained blue active states, rounded switches and the original white flame logo. Built directly with Roblox GUI objects, with no external UI dependency.
 
 ```lua
 local Eclipse = loadstring(game:HttpGet("https://raw.githubusercontent.com/VexyEclipse/Eclipsalis/main/EclipseUI.lua"))()
 local Window = Eclipse:CreateWindow({
     Name = "Eclipse Hub",
     LoadingTitle = "ECLIPSE",
-    LoadingSubtitle = "CONTROL INTERFACE",
+    LoadingSubtitle = "v1.4.0",
     Theme = "Default",
     ToggleUIKeybind = "K",
     ConfigurationSaving = {Enabled = false},
@@ -31,20 +31,19 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/VexyEclipse/Eclipsali
 
 ## Features
 
-- Five live themes defined by exactly three colors: `Base`, `Primary`, `Accent`.
-- Fixed 660×420 window, 38px header, 145px navigation that collapses to a 44px icon rail, and two section columns with 12px spacing. No status footer, ECL label or diagonal stripes.
-- Spaced L corner brackets matching the supplied SVG: 8px legs, 1px strokes, 3px outer offset; they track the window and hide with it.
-- 34px toggles/buttons/dropdowns/keybinds/color pickers and 46px sliders/inputs. Inputs and selectors sit alongside their labels. Cards have 10px corners, feature rows and tabs 8px corners, and the window 12px corners.
-- Solid-blue buttons and slider fills with faint static outlines; no section/sidebar hover shadows. A 40×22 pill switch with an 18px circular thumb and short eased switch/tab animations.
-- Mouse/touch dragging, exact slider entry and color selection, plus a floating mobile reopen button. No UIScale or window resizing.
-- Sections, dividers, labels, paragraphs, buttons, toggles, precise sliders, searchable single/multi dropdowns, text/numeric inputs, keyboard/mouse keybinds, HSV/hex/RGB picker, action notifications, and dialogs when explicitly requested by the caller. Tooltips are disabled.
-- Explicit flags, JSON configuration, silent setters, owned task/signal/tween cleanup and held-key release.
+- Responsive 660×420 logical desktop window; compact screens use one section column. No manual resizing.
+- 148px sidebar with a 44px collapsed rail, rounded icon search, thin 3px content scrollbar and soft window shadow.
+- 34px interactive rows; consistent 64px right-side fields, 28px keycaps and fully rounded switches. Labels and paragraphs may grow to fit multiline content.
+- Neutral buttons, borderless row hover, 4px slider tracks with 12px knobs and 0.15s Quad Out motion.
+- Sans labels (14px), uppercase secondary section titles (13px) and monospace only for numeric values/keybinds.
+- Sections, dividers, labels, paragraphs, buttons, toggles, exact-value sliders, searchable single/multi dropdowns, text/numeric inputs, keyboard/mouse keybinds, HSV/hex/RGB picker, explicit notifications and dialogs.
+- Compatible flags, silent setters, JSON configuration and owned cleanup. Existing custom theme APIs and named presets remain available for callers.
 
-The default theme uses Base #050505, Primary #FFFFFF and Accent #2563EB. Other presets remain available for saved profiles. All chrome colors derive from these three tokens.
+The default palette is window #0E0F12, sidebar #121317, sections #16181D, row hover #1D2026, inputs #0B0C0F, active accent #3B82F6, text #E6E8EC and secondary text #8A8F98. Sections use a faint white stroke at 94% transparency. The original Base/Primary/Accent customization API remains; semantic surface tokens keep the default design consistent.
 
-Controls are added to the latest section in a tab. `Section:CreateToggle(...)` also works for explicit grouping. Search only filters visibility; it never changes values. The title region smoothly drags the window on rendered frames; the movement listener stops after settling. K toggles visibility and the 36px flame-icon control reopens it, with a faint steady glow. On screens smaller than 660×420 the window retains its pixel size: dragging pans it and reopening recenters the accessible title. `OnClose` can connect the header Close action to your application's cleanup; otherwise Close destroys the UI.
+Controls are added to the latest section in a tab. `Section:CreateToggle(...)` also works for explicit grouping. Search only filters visibility; it never changes values. The title region smoothly drags the window on rendered frames; the movement listener stops after settling. K toggles visibility and the 36px flame-icon control reopens it, with a faint steady glow. Scaling and compact layout keep the full window inside smaller viewports; popovers use the same logical coordinates. `OnClose` can connect the header Close action to your application's cleanup; otherwise Close destroys the UI.
 
-The ASCII renderer uses one shared RenderStepped connection, throttled to 18 updates per second, with bounded cell and ripple counts. Ambient glyphs remain at about 0.89–0.93 transparency; pointer-triggered ripples are disabled. The background and waveform stop while minimized, and their resources disconnect on unload. This bounds work; actual frame cost still requires measurement in Roblox.
+The ASCII renderer uses one shared RenderStepped connection, throttled to 18 updates per second, with bounded cell and ripple counts. Ambient glyphs are more visible, at about 0.70–0.82 transparency; pointer-triggered ripples are disabled. The background stops while minimized, and their resources disconnect on unload. This bounds work; actual frame cost still requires measurement in Roblox.
 
 The owner's original white flame logo is preserved, as requested on 21 October. Its exact transparent PNG is embedded in the module and loaded with executor `writefile` plus `getcustomasset`/`getsynasset`; an E monogram is the fallback. No generated logo is used. Supply `LogoId` for your own published image instead. The original vector trace is [UI/Assets/eclipse-logo.svg](UI/Assets/eclipse-logo.svg).
 
@@ -95,7 +94,7 @@ The 21 October original-logo restoration compiles in the library, sample and Pre
 Historical v1.3.0 validation: it compiled in the library, example, both Premium wrappers and extracted runtime. 33 temporary focused checks pass for full-width section order/spacing, search/hiding/destroyed sections, expanded/collapsed widths, scroll bounds, rounded geometry, glow states/pulse settling, pill-switch positions/contrast and callback/silent-setter behavior. These checks use isolated real library functions and mocks, not Roblox rendering. The original logo and gameplay/profile contracts remain unchanged. No retained tests or game/webhook calls.
 
 
-## 21 October minimal styling update
+## Historical: 21 October minimal styling update
 
 UI v1.3.1 uses black (#050505), white (#FFFFFF) and blue (#2563EB). Removed footer status text, duplicate version/FPS display and its sampling loop, all hover/long-press tooltips, section header accents, section/row/sidebar hover halos and ambient pointer ripples. Buttons and slider fills use solid blue with one faint static outline. Brackets have 8px legs, 1px lines and a 3px gap. Window dragging uses frame-rate-independent smoothing with a render listener only while dragging/settling; minimize, viewport changes and destruction cancel it. The reopen control is a 36px original-flame icon with a faint outline. Dropdown/color-picker menus and explicit notification/dialog APIs remain; the gallery no longer has popup-demo buttons. Original logo, fixed geometry, single-column order and gameplay/profile contracts are preserved.
 
@@ -105,8 +104,15 @@ Local compilation and focused drag lifecycle checks are recorded in the project 
 Local validation: library/gallery, both Premium wrappers and extracted embedded runtime compile with Luau 0.739. Actual smooth-drag helper checks pass at 30/60/120 Hz for constrained approach, frame-rate independence, exact settling, release disconnection, hide cancellation and cleanup. Rebuild is reproducible, original PNG hash matches, and Premium entry files are identical. Temporary checks were removed. Live Roblox rendering and perceived smoothness remain unverified.
 
 
-## 22 October combined layout
+## Historical: 22 October combined layout
 
-Version 1.3.2 restores the original 660×420 fixed window, 145px sidebar (44px collapsed) and alternating two-column section layout from the supplied screenshot. Cards use 10px outer padding, 12px column/section gaps and 3px row gaps. The newer black/white/blue theme, rounded switches, subtle steady control outlines, smooth dragging, close brackets and 36px flame reopen icon remain. Removed the ECL label, diagonal registration stripes and entire status footer including the blue dot; content extends to the bottom. Inputs are narrowed to fit the restored columns. Window bounds and centering share the same dimension constants. No tooltips, section/sidebar hover halos or FPS counter return.
+Version 1.3.2 restored the original 660×420 window and two section columns, removed the ECL/stripe/status footer decorations, and preserved the original flame logo. The v1.4.0 section below supersedes its styling and fixed-pixel sizing.
 
 Local validation: library and demo compile with Luau 0.739; 11 focused actual-reflow checks pass for expanded/collapsed widths, ordering, canvas bounds, filtering, empty results and hidden/destroyed sections. Build is reproducible and embedded original-logo bytes match. Temporary checks were removed. Gameplay was not changed; live Roblox appearance/input remains unverified.
+
+
+## 22 October v1.4.0 polish
+
+Version 1.4.0 uses the requested charcoal palette, a 660×420 logical window with a 48px header, 148px sidebar (44px collapsed), and two alternating section columns. A shared UIScale keeps the window, menus, dragging and reopen button in the same coordinate space; narrow screens use a 400px logical window, collapsed navigation and one section column. The window fits the available viewport without a resize handle. Sections have 16px internal padding, 12px column/section gaps, 4px row gaps, uppercase 13px secondary headings and a centered divider. Interactive rows are 34px high with 12px side padding, 14px sans labels and 64px value fields. Sections have an optional faint 1px white stroke; rows have no borders. Selected tabs use a 15% blue fill, blue icon/text and a 2px left marker. All switches share the same rounded style; sliders have a 4px track and 12px knob, growing to 16px during hover/drag. A soft window shadow, short fades and 0.15s Quad Out switch/slider motion replace decorative glow. External brackets, INDEX, header watermark, header divider, ECL/stripes and the status footer are absent. Search is a single rounded icon button; dropdown filters appear only when requested. No hover halos or tooltips.
+
+Local validation for v1.4.0: library/gallery, both Premium wrappers and the extracted embedded runtime compile with Luau 0.739. 57 focused temporary checks cover real dropdown callbacks and silent restoration, Halloween selection/cooldown state, separate toggle/slider behavior, slider/input geometry, six viewport sizes and popup bounds, scaled/two-column/compact reflow, ESP font bounds and reversible No Fall cleanup. The build is reproducible, the original embedded PNG is unchanged, and the Premium entries are identical. Checks use isolated source functions with mocks, not Roblox rendering or game purchases; temporary files are removed. Live font fit, touch, viewport changes, animation cost, profile/teleport restoration and purchase acceptance still require the owner’s client.

@@ -3,7 +3,7 @@ local Eclipse = loadstring(game:HttpGet("https://raw.githubusercontent.com/VexyE
 
 local Window = Eclipse:CreateWindow({
     Name = "Eclipse Hub",
-    Subtitle = "TOTALITY / v1.3.2",
+    Subtitle = "TOTALITY / v1.4.0",
     LoadingTitle = "ECLIPSE",
     LoadingSubtitle = "INTERFACE INITIALIZATION",
     ShowText = "ECLIPSE",
@@ -22,12 +22,14 @@ end
 local Main = Window:CreateTab("Main")
 Main:CreateSection("Movement")
 Main:CreateSlider({Name = "Walk Speed", Range = {16, 120}, Increment = 1, CurrentValue = 32,
-    Suffix = "studs", Flag = "DemoWalkSpeed", Tooltip = "Demonstrates exact entry and mouse/touch slider dragging.",
+    Suffix = "studs/s", Flag = "DemoWalkSpeed", Tooltip = "Demonstrates exact entry and mouse/touch slider dragging.",
     Callback = report("Walk Speed")})
-Main:CreateToggle({Name = "Walk Speed Enabled", CurrentValue = false, Flag = "DemoSpeedEnabled",
+Main:CreateToggle({Name = "Walk Speed", CurrentValue = false, Flag = "DemoSpeedEnabled",
     Info = "Showcase only. This switch does not change your character.", Callback = report("Speed switch")})
 Main:CreateSlider({Name = "Jump Power", Range = {50, 200}, Increment = 5, CurrentValue = 75,
     Flag = "DemoJumpPower", Callback = report("Jump Power")})
+Main:CreateToggle({Name = "Jump Power", CurrentValue = false, Flag = "DemoJumpEnabled", Callback = report("Jump switch")})
+Main:CreateToggle({Name = "No Fall", CurrentValue = false, Flag = "DemoNoFall", Callback = report("No Fall")})
 Main:CreateKeybind({Name = "Quick Action", CurrentKeybind = "P", HoldToInteract = false,
     Flag = "DemoQuickAction", Tooltip = "Click the key field and press a keyboard key or mouse button.",
     Callback = function() print("[Eclipse Demo] Quick Action pressed.") end})
@@ -58,7 +60,7 @@ Farms:CreateToggle({Name = "Auto Kraken", CurrentValue = false, Flag = "DemoKrak
 Farms:CreateDropdown({Name = "Kraken Farm Mode", Options = {"Auto", "Anchor", "Summoning", "Attack"}, CurrentOption = {"Auto"},
     MultipleOptions = false, Flag = "DemoKrakenMode", Callback = report("Kraken Mode")})
 Farms:CreateSlider({Name = "Kraken Flight Speed", Range = {25, 150}, Increment = 5, CurrentValue = 75,
-    Flag = "DemoKrakenSpeed", Callback = report("Kraken Speed")})
+    Suffix = "studs/s", Flag = "DemoKrakenSpeed", Callback = report("Kraken Speed")})
 Farms:CreateSlider({Name = "Kraken Attack Hold", Range = {1, 11}, Increment = 1, CurrentValue = 10,
     Suffix = "s", Flag = "DemoKrakenHold", Callback = report("Kraken Hold")})
 
@@ -83,7 +85,7 @@ Settings:CreateDropdown({Name = "Theme", Options = {"Default", "CyberYellow", "A
     CurrentOption = {"Default"}, MultipleOptions = false, Flag = "DemoTheme", Callback = function(selected)
         if selected[1] then Window.ModifyTheme(selected[1]) end
     end})
-Settings:CreateColorPicker({Name = "Demo Highlight", Color = Color3.fromRGB(37, 99, 235), Flag = "DemoColor",
+Settings:CreateColorPicker({Name = "Demo Highlight", Color = Color3.fromRGB(59, 130, 246), Flag = "DemoColor",
     Tooltip = "Open the HSV map, hue slider, hex and RGB fields.", Callback = report("Highlight")})
 Settings:CreateInput({Name = "Profile Name", CurrentValue = "", PlaceholderText = "Choose a custom name",
     RemoveTextAfterFocusLost = false, Flag = "DemoProfileName", Callback = report("Profile Name")})
