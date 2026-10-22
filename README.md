@@ -131,3 +131,6 @@ v1.4.2 input overflow fix: input placeholders and unfocused values use end ellip
 
 
 v1.4.3: corner brackets now use the shared Accent color (#3B82F6 by default), with a subtle static three-layer blue falloff behind their sharp 1px edges. Glow follows bracket positioning, hiding and theme changes; no animation worker was added. Library/gallery compile locally; glow appearance remains a live Roblox check.
+
+
+v1.4.4: fixed color-picker badge overlap by removing parent UIPadding and placing the hex label and 16px swatch in separate lanes inside a 96px badge. The hex label has end ellipsis and the badge clips contents; picker/setter/callback behavior is unchanged. Library/gallery compilation passed. Live Roblox rendering remains to be checked.

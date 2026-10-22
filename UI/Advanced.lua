@@ -475,12 +475,16 @@ return function(Library, ctx)
         local control = ctx.row(self, options, 34)
         control.Type = "ColorPicker"
         control.Color = toColor(options.Color or options.CurrentValue) or ctx.theme().Accent
-        local button, badgeGlow, setBadgeActive = trigger(control, 64)
-        button.TextXAlignment = Enum.TextXAlignment.Left
-        ctx.new("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 28)}, button)
+        local button, badgeGlow, setBadgeActive = trigger(control, 96)
+        -- Independent text and swatch lanes; parent padding must not shift the swatch.
+        button.ClipsDescendants = true
+        local hexLabel = ctx.text(button, "", {Name = "ColorValue", Position = UDim2.fromOffset(8, 0),
+            Size = UDim2.new(1, -36, 1, 0), Font = ctx.fontMono, TextSize = 13,
+            TextTruncate = Enum.TextTruncate.AtEnd, TextWrapped = false, ZIndex = button.ZIndex + 1})
         local swatch = ctx.new("Frame", {
-            AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0),
-            Size = UDim2.fromOffset(14, 14), BorderSizePixel = 0, BackgroundColor3 = control.Color,
+            Name = "ColorSwatch", AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0),
+            Size = UDim2.fromOffset(16, 16), BorderSizePixel = 0, BackgroundColor3 = control.Color,
+            ZIndex = button.ZIndex + 1,
         }, button)
         ctx.round(swatch, 3)
         local panel, closePanel, matrix, cursor, hueCursor, hexField
@@ -489,7 +493,7 @@ return function(Library, ctx)
         local function render()
             control.CurrentColor, control.CurrentValue = control.Color, control.Color
             control.value = control.Color
-            button.Text = hex(control.Color)
+            hexLabel.Text = hex(control.Color)
             swatch.BackgroundColor3 = control.Color
             if matrix and matrix.Parent then
                 matrix.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
