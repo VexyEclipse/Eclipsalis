@@ -26,6 +26,9 @@ return function(Library, ctx)
         properties.Font = properties.Font or ctx.font
         properties.TextSize = properties.TextSize or 13
         properties.BorderSizePixel = 0
+        properties.TextWrapped = false
+        properties.TextTruncate = Enum.TextTruncate.AtEnd
+        properties.ClipsDescendants = true
         local box = ctx.new("TextBox", properties, parent)
         local focused = false
         ctx.round(box, 6)
@@ -35,11 +38,13 @@ return function(Library, ctx)
         ctx.bind(box, "PlaceholderColor3", "Secondary")
         ctx.connect(box.Focused, function()
             focused = true
+            box.TextTruncate = Enum.TextTruncate.None
             ctx.tween(box, {BackgroundColor3 = ctx.colors.Input}, 0.14)
             ctx.tween(focusBorder, {Transparency = .45}, .14)
         end)
         ctx.connect(box.FocusLost, function()
             focused = false
+            box.TextTruncate = Enum.TextTruncate.AtEnd
             ctx.tween(box, {BackgroundColor3 = ctx.colors.Input}, 0.14)
             ctx.tween(focusBorder, {Transparency = .88}, .14)
         end)

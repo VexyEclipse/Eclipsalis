@@ -66,10 +66,15 @@ return function(Library, ctx)
         properties.TextSize = properties.TextSize or 13
         properties.BackgroundTransparency = properties.BackgroundTransparency or 1
         properties.BorderSizePixel = 0
+        properties.TextWrapped = false
+        properties.TextTruncate = Enum.TextTruncate.AtEnd
+        properties.ClipsDescendants = true
         properties.ClearTextOnFocus = properties.ClearTextOnFocus == true
         local box = new("TextBox", properties, parent)
         bind(box, "TextColor3", "Primary")
         bind(box, "PlaceholderColor3", "Secondary")
+        ctx.connect(box.Focused, function() box.TextTruncate = Enum.TextTruncate.None end)
+        ctx.connect(box.FocusLost, function() box.TextTruncate = Enum.TextTruncate.AtEnd end)
         return box
     end
 
@@ -179,7 +184,7 @@ return function(Library, ctx)
         local valueWidth = 64
         compactLabel(label, valueWidth + 36, 16, 0)
         local field = new("Frame", {
-            Name = "ValueBadge", AnchorPoint = Vector2.new(1, .5), Position = UDim2.new(1, -12, .5, 0),
+            Name = "ValueBadge", ClipsDescendants = true, AnchorPoint = Vector2.new(1, .5), Position = UDim2.new(1, -12, .5, 0),
             Size = UDim2.fromOffset(valueWidth, 28), BorderSizePixel = 0,
         }, row)
         local focused = false
@@ -289,7 +294,7 @@ return function(Library, ctx)
         local numeric = options.Numeric == true or options.NumbersOnly == true
         compactLabel(label, 100, 34)
         local field = new("Frame", {
-            Name = "InputField", AnchorPoint = Vector2.new(1, .5), Position = UDim2.new(1, -12, .5, 0),
+            Name = "InputField", ClipsDescendants = true, AnchorPoint = Vector2.new(1, .5), Position = UDim2.new(1, -12, .5, 0),
             Size = UDim2.fromOffset(64, 28), BorderSizePixel = 0,
         }, row)
         local focused = false

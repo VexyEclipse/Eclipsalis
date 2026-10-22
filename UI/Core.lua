@@ -4,7 +4,7 @@ local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
-local Library = {Flags = {}, Version = "1.4.1", Name = "Eclipse UI"}
+local Library = {Flags = {}, Version = "1.4.2", Name = "Eclipse UI"}
 local Tab = {}
 Tab.__index = Tab
 local WINDOW_WIDTH, WINDOW_HEIGHT = 660, 420
