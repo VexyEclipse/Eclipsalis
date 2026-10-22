@@ -1,6 +1,6 @@
 # Eclipse UI
 
-A polished, compact Roblox interface for Eclipse. Version **1.6.3** uses near-black Absolute Dark surfaces, restrained blue active states, rounded switches and the original white flame logo. Built directly with Roblox GUI objects, with no external UI dependency.
+A polished, compact Roblox interface for Eclipse. Version **1.6.4** uses near-black Absolute Dark surfaces, restrained blue active states, rounded switches and the original white flame logo. Built directly with Roblox GUI objects, with no external UI dependency.
 
 ```lua
 local Eclipse = loadstring(game:HttpGet("https://raw.githubusercontent.com/VexyEclipse/Eclipsalis/main/EclipseUI.lua"))()
@@ -169,3 +169,5 @@ v1.6.3: seven new presets, each passing 4.5:1 contrast for primary and secondary
 | NeonCyan | `~ - ^` | Two gliding sine waves |
 
 Custom theme tables may set `Effect` to any of these names.
+
+v1.6.4: the sidebar collapse control uses Lucide `panel-left-close` / `panel-left-open`, so a chevron shows which way the sidebar will move. Switches glow with an accent neon bloom while on, buttons flash the same bloom when pressed, and sliders glow softly along the filled span, flaring with the thumb while hovered or dragged (`ctx.glow` now takes an optional color role). Preset names are spaced for display: Cyber Yellow, Amber Glow and Neon Cyan; `CyberYellow`, `AmberGlow` and `NeonCyan` still work.

@@ -94,8 +94,10 @@ return function(Library, ctx)
         end)
         ctx.connect(row.MouseLeave, function() tween(outline, {Transparency = .9}, .12) end)
         bind(label, "TextColor3", "Primary")
+        local neon = ctx.glow(row, 6, .62, nil, "Accent")
         ctx.connect(row.Activated, function()
             if not usable(control) then return end
+            neon:Pulse()
             outline.Transparency = .6
             ctx.delay(.1, function() if outline.Parent then tween(outline, {Transparency = .9}, .2) end end)
             ctx.changed(control, nil, true)
@@ -131,6 +133,8 @@ return function(Library, ctx)
         bind(track, "BackgroundColor3", trackColor)
         ctx.round(track, 11)
         local trackEdge = ctx.stroke(track, "Border", control.CurrentValue and 1 or .88)
+        -- Neon bloom around the track while the switch is on.
+        local neon = ctx.glow(track, 11, .7, nil, "Accent")
         local block = new("Frame", {
             Name = "ToggleThumb", AnchorPoint = Vector2.new(0, .5), Position = UDim2.new(0, 4, .5, 0),
             Size = UDim2.fromOffset(14, 14), BorderSizePixel = 0,
@@ -146,6 +150,7 @@ return function(Library, ctx)
                 Size = UDim2.fromOffset(enabled and 16 or 14, enabled and 16 or 14)}, duration, Enum.EasingStyle.Back)
             tween(track, {BackgroundColor3 = trackColor(ctx.theme())}, animate and 0.15 or 0)
             tween(trackEdge, {Transparency = enabled and 1 or .88}, animate and 0.15 or 0)
+            neon:SetActive(enabled, animate)
         end
         local function set(value, skipCallback)
             if control.Destroyed or not ctx.alive() then return control end
@@ -252,10 +257,14 @@ return function(Library, ctx)
         }, track)
         bind(thumb, "BackgroundColor3", "Primary")
         ctx.round(thumb, 8)
+        -- Neon: the filled span always glows softly; it and the thumb flare while hovered or dragged.
+        local fillNeon = ctx.glow(fill, 2, .78, nil, "Accent")
+        local thumbNeon = ctx.glow(thumb, 8, .68, nil, "Accent")
         local dragging, hovered = false, false
         local function sizeThumb()
             local size = dragging or hovered
             ctx.tween(thumb, {Size = UDim2.fromOffset(size and 16 or 12, size and 16 or 12)}, .15)
+            thumbNeon:SetActive(size)
         end
         ctx.connect(hit.MouseEnter, function() hovered = true; sizeThumb() end)
         ctx.connect(hit.MouseLeave, function() hovered = false; sizeThumb() end)
@@ -267,6 +276,7 @@ return function(Library, ctx)
             local ratio = maximum > minimum and (control.CurrentValue - minimum) / (maximum - minimum) or 0
             tween(fill, {Size = UDim2.new(ratio, 0, 1, 0)}, animate and 0.15 or 0)
             tween(thumb, {Position = UDim2.fromScale(ratio, 0.5)}, animate and 0.15 or 0)
+            if fillNeon.Active ~= (ratio > .01) then fillNeon:SetActive(ratio > .01, animate) end
             if not valueBox:IsFocused() then formatValue() end
         end
         local function set(value, skipCallback, animate)

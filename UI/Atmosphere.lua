@@ -12,9 +12,9 @@ return function(Library, ctx)
         Sakura = {Glyphs = {"*", "~", ".", "'"}, Motion = "rain", Speed = .55, Trail = .14},
         Synthwave = {Glyphs = {"=", "-", "_", "="}, Motion = "rise"},
         Frost = {Glyphs = {"*", "+", ".", "*"}, Motion = "snow"},
-        CyberYellow = {Glyphs = {"0", "1", "A", "F", "#", "/", "_"}, Motion = "glitch"},
-        AmberGlow = {Glyphs = {">", "_", "$", "#", ":", "."}, Motion = "type"},
-        NeonCyan = {Glyphs = {"~", "-", "^", "~"}, Motion = "wave"},
+        ["Cyber Yellow"] = {Glyphs = {"0", "1", "A", "F", "#", "/", "_"}, Motion = "glitch"},
+        ["Amber Glow"] = {Glyphs = {">", "_", "$", "#", ":", "."}, Motion = "type"},
+        ["Neon Cyan"] = {Glyphs = {"~", "-", "^", "~"}, Motion = "wave"},
         Light = {Glyphs = {".", "'", "."}, Motion = "twinkle"},
     }
     local function effect()

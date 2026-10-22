@@ -4,7 +4,7 @@ local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
-local Library = {Flags = {}, Version = "1.6.3", Name = "Eclipse UI"}
+local Library = {Flags = {}, Version = "1.6.4", Name = "Eclipse UI"}
 local Tab = {}
 Tab.__index = Tab
 local WINDOW_WIDTH, WINDOW_HEIGHT = 660, 420
@@ -36,13 +36,13 @@ local function resolveTheme(theme)
     return result
 end
 Library.ThemeNames = {"Absolute Dark", "Charcoal", "Matrix Green", "Crimson Eclipse", "Void", "Monochrome", "Sakura",
-    "Synthwave", "Frost", "CyberYellow", "AmberGlow", "NeonCyan", "Light"}
+    "Synthwave", "Frost", "Cyber Yellow", "Amber Glow", "Neon Cyan", "Light"}
 Library.Themes = {
     Charcoal = palette("0E0F12", "E6E8EC", "3B82F6", {Sidebar="121317", Section="16181D", Hover="1D2026", Input="0B0C0F", Secondary="8A8F98", Shadow="0B0C0F"}),
     ["Absolute Dark"] = palette("020304", "E6E8EC", "3B82F6", {Sidebar="050608", Section="090B0E", Hover="11151B", Input="010203", Secondary="8A8F98", Shadow="000000"}),
-    CyberYellow = palette("101208", "F4F5DE", "FCEE09", {Sidebar="191C0D", Section="222615", Hover="30371B", Input="090C05", Secondary="B0B596", OnAccent="101208"}),
-    AmberGlow = palette("191009", "FFF0DF", "FFAD42", {Sidebar="23170F", Section="302015", Hover="412D1D", Input="100A06", Secondary="C6A88A", OnAccent="191009"}),
-    NeonCyan = palette("06151C", "E1F8FF", "00E5FF", {Sidebar="09212B", Section="0D2C38", Hover="123F4E", Input="031016", Secondary="8DBAC7", OnAccent="06151C"}),
+    ["Cyber Yellow"] = palette("101208", "F4F5DE", "FCEE09", {Sidebar="191C0D", Section="222615", Hover="30371B", Input="090C05", Secondary="B0B596", OnAccent="101208"}),
+    ["Amber Glow"] = palette("191009", "FFF0DF", "FFAD42", {Sidebar="23170F", Section="302015", Hover="412D1D", Input="100A06", Secondary="C6A88A", OnAccent="191009"}),
+    ["Neon Cyan"] = palette("06151C", "E1F8FF", "00E5FF", {Sidebar="09212B", Section="0D2C38", Hover="123F4E", Input="031016", Secondary="8DBAC7", OnAccent="06151C"}),
     Light = palette("EDF1F7", "192332", "2563EB", {Sidebar="E2E8F1", Section="FFFFFF", Hover="DCE5F2", Input="EAF0F7", Secondary="536174", Border="192332", Shadow="101827", OnAccent="FFFFFF"}),
     ["Matrix Green"] = palette("020603", "D7F5DD", "22C55E", {Sidebar="040A06", Section="07110A", Hover="0D1C11", Input="010402", Secondary="7FA88A", OnAccent="020603"}),
     ["Crimson Eclipse"] = palette("0D0607", "F3E4E5", "EF4444", {Sidebar="140A0B", Section="1B0E10", Hover="2A1518", Input="080304", Secondary="A88A8D"}),
@@ -55,8 +55,10 @@ Library.Themes = {
 -- Absolute Dark is the default; "Default" stays a valid name for existing scripts.
 Library.Themes.Default = Library.Themes["Absolute Dark"]
 local aliases = {Eclipse = "Default", Amethyst = "Default", Bloom = "Default", Serenity = "Default",
-    AbsoluteDark = "Absolute Dark", DarkBlue = "NeonCyan", Ocean = "NeonCyan", Green = "NeonCyan",
-    MatrixGreen = "Matrix Green", CrimsonEclipse = "Crimson Eclipse"}
+    AbsoluteDark = "Absolute Dark", DarkBlue = "Neon Cyan", Ocean = "Neon Cyan", Green = "Neon Cyan",
+    MatrixGreen = "Matrix Green", CrimsonEclipse = "Crimson Eclipse",
+    -- Earlier unspaced preset names keep working.
+    CyberYellow = "Cyber Yellow", AmberGlow = "Amber Glow", NeonCyan = "Neon Cyan"}
 state.theme = resolveTheme(Library.Themes.Default)
 state.effect = "Absolute Dark"
 function ctx.effectName() return state.effect end
@@ -185,16 +187,16 @@ function ctx.round(parent, radius)
     return corner
 end
 -- Layered translucent outlines give a soft halo without assets or animation loops.
-function ctx.glow(parent, radius, strength, idle)
+function ctx.glow(parent, radius, strength, idle, role)
     local layer = ctx.new("Frame", {Name = "AccentBloom", BackgroundTransparency = 1,
         Position = UDim2.fromOffset(-1, -1), Size = UDim2.new(1, 2, 1, 2),
         Active = false, ZIndex = parent.ZIndex}, parent)
     ctx.round(layer, (radius or 8) + 1)
-    local inner = ctx.stroke(layer, "Secondary", idle or 1); inner.Thickness = 3
+    local inner = ctx.stroke(layer, role or "Secondary", idle or 1); inner.Thickness = 3
     local halo = ctx.new("Frame", {Name = "BloomHalo", BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 1), Active = false, ZIndex = layer.ZIndex}, layer)
     ctx.round(halo, (radius or 8) + 1)
-    local outer = ctx.stroke(halo, "Secondary", idle and math.min(.985, idle + .04) or 1); outer.Thickness = 7
+    local outer = ctx.stroke(halo, role or "Secondary", idle and math.min(.985, idle + .04) or 1); outer.Thickness = 7
     local glow = {Active = false, Frame = layer, Generation = 0}
     local alpha = math.clamp(tonumber(strength) or 0.76, 0.6, 0.9)
     function glow:SetActive(active, animate)
@@ -272,6 +274,8 @@ function ctx.vectorIcon(parent, name, properties)
         local glyph = "layout-grid"
         if name == "search" then glyph = "search"
         elseif name == "sidebar" then glyph = "panel-left"
+        elseif name == "sidebar-close" then glyph = "panel-left-close"
+        elseif name == "sidebar-open" then glyph = "panel-left-open"
         elseif name == "keyboard" then glyph = "keyboard"
         elseif ctx.lucide and ctx.lucide[name] then glyph = name
         elseif named("setting", "config") then glyph = "settings"
@@ -1026,7 +1030,14 @@ function Library:CreateWindow(rawOptions)
     end)
     local collapse = ctx.new("TextButton", {Name = "Collapse", Text = "", Position = UDim2.fromOffset(state.collapsed and 10 or 16, 8),
         Size = UDim2.fromOffset(24, 24), BackgroundTransparency = 1, AutoButtonColor = false, ZIndex = 7}, sidebar)
-    ctx.vectorIcon(collapse, "sidebar", {Position = UDim2.fromOffset(4, 4), Size = UDim2.fromOffset(16, 16), ZIndex = 8})
+    -- The panel icon carries a chevron pointing the way the sidebar will move.
+    local collapseIcon
+    local function drawCollapseIcon()
+        if collapseIcon then collapseIcon:Destroy() end
+        collapseIcon = ctx.vectorIcon(collapse, state.collapsed and "sidebar-open" or "sidebar-close",
+            {Position = UDim2.fromOffset(4, 4), Size = UDim2.fromOffset(16, 16), ZIndex = 8})
+    end
+    drawCollapseIcon()
     function window:SetSidebarCollapsed(value)
         state.collapsed = value == true; closePopup()
         local width = state.collapsed and 44 or SIDEBAR_WIDTH
@@ -1035,6 +1046,7 @@ function Library:CreateWindow(rawOptions)
         nav.Position = UDim2.fromOffset(state.collapsed and 4 or 8, 40)
         nav.Size = UDim2.new(1, state.collapsed and -8 or -16, 1, -48)
         collapse.Position = UDim2.fromOffset(state.collapsed and 10 or 16, 8)
+        drawCollapseIcon()
         for _, tab in ipairs(state.tabs) do
             tab.NavLabel.Visible = not state.collapsed
             tab.Icon.Position = state.collapsed and UDim2.new(.5, -8, 0, 8) or UDim2.fromOffset(12, 8)
