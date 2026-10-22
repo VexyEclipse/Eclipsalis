@@ -5,7 +5,7 @@ local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local GuiService = game:GetService("GuiService")
-local Library = {Flags = {}, Version = "1.6.6", Name = "Eclipse UI"}
+local Library = {Flags = {}, Version = "1.6.7", Name = "Eclipse UI"}
 local Tab = {}
 Tab.__index = Tab
 local WINDOW_WIDTH, WINDOW_HEIGHT = 660, 420
@@ -204,28 +204,34 @@ function ctx.round(parent, radius)
     return corner
 end
 -- Layered translucent outlines give a soft halo without assets or animation loops.
-function ctx.glow(parent, radius, strength, idle, role)
+-- `single` keeps only the tight inner bloom, without the wider outer halo.
+function ctx.glow(parent, radius, strength, idle, role, single)
     local layer = ctx.new("Frame", {Name = "AccentBloom", BackgroundTransparency = 1,
         Position = UDim2.fromOffset(-1, -1), Size = UDim2.new(1, 2, 1, 2),
         Active = false, ZIndex = parent.ZIndex}, parent)
     ctx.round(layer, (radius or 8) + 1)
     local inner = ctx.stroke(layer, role or "Secondary", idle or 1); inner.Thickness = 3
-    local halo = ctx.new("Frame", {Name = "BloomHalo", BackgroundTransparency = 1,
-        Size = UDim2.fromScale(1, 1), Active = false, ZIndex = layer.ZIndex}, layer)
-    ctx.round(halo, (radius or 8) + 1)
-    local outer = ctx.stroke(halo, role or "Secondary", idle and math.min(.985, idle + .04) or 1); outer.Thickness = 7
+    local outer
+    if not single then
+        local halo = ctx.new("Frame", {Name = "BloomHalo", BackgroundTransparency = 1,
+            Size = UDim2.fromScale(1, 1), Active = false, ZIndex = layer.ZIndex}, layer)
+        ctx.round(halo, (radius or 8) + 1)
+        outer = ctx.stroke(halo, role or "Secondary", idle and math.min(.985, idle + .04) or 1); outer.Thickness = 7
+    end
     local glow = {Active = false, Frame = layer, Generation = 0}
     local alpha = math.clamp(tonumber(strength) or 0.76, 0.6, 0.9)
     function glow:SetActive(active, animate)
         self.Active = active == true
         ctx.tween(inner, {Transparency = self.Active and alpha or idle or 1}, animate == false and 0 or 0.16)
-        ctx.tween(outer, {Transparency = self.Active and math.min(.96, alpha + .13) or (idle and math.min(.985, idle + .04) or 1)}, animate == false and 0 or .18)
+        if outer then
+            ctx.tween(outer, {Transparency = self.Active and math.min(.96, alpha + .13) or (idle and math.min(.985, idle + .04) or 1)}, animate == false and 0 or .18)
+        end
     end
     function glow:Pulse()
         self.Generation += 1
         local generation = self.Generation
         ctx.tween(inner, {Transparency = 0.55}, 0.07)
-        ctx.tween(outer, {Transparency = 0.82}, 0.07)
+        if outer then ctx.tween(outer, {Transparency = 0.82}, 0.07) end
         ctx.delay(0.12, function()
             if layer.Parent and self.Generation == generation then self:SetActive(self.Active) end
         end)
@@ -291,8 +297,7 @@ function ctx.vectorIcon(parent, name, properties)
         local glyph = "layout-grid"
         if name == "search" then glyph = "search"
         elseif name == "sidebar" then glyph = "panel-left"
-        elseif name == "sidebar-close" then glyph = "panel-left-close"
-        elseif name == "sidebar-open" then glyph = "panel-left-open"
+        elseif name == "chevron-left" then glyph = "chevron-left"
         elseif name == "keyboard" then glyph = "keyboard"
         elseif ctx.lucide and ctx.lucide[name] then glyph = name
         elseif named("setting", "config") then glyph = "settings"
@@ -1090,12 +1095,13 @@ function Library:CreateWindow(rawOptions)
     end)
     local collapse = ctx.new("TextButton", {Name = "Collapse", Text = "", Position = UDim2.fromOffset(state.collapsed and 10 or 16, 8),
         Size = UDim2.fromOffset(24, 24), BackgroundTransparency = 1, AutoButtonColor = false, ZIndex = 7}, sidebar)
-    -- The panel icon carries a chevron pointing the way the sidebar will move.
-    local collapseIcon
+    -- Panel icon, plus a collapse arrow beside it while the sidebar is expanded; the button widens to cover it.
+    ctx.vectorIcon(collapse, "sidebar", {Position = UDim2.fromOffset(4, 4), Size = UDim2.fromOffset(16, 16), ZIndex = 8})
+    local collapseArrow = ctx.vectorIcon(collapse, "chevron-left", {Position = UDim2.fromOffset(22, 2),
+        Size = UDim2.fromOffset(20, 20), ZIndex = 8})
     local function drawCollapseIcon()
-        if collapseIcon then collapseIcon:Destroy() end
-        collapseIcon = ctx.vectorIcon(collapse, state.collapsed and "sidebar-open" or "sidebar-close",
-            {Position = UDim2.fromOffset(4, 4), Size = UDim2.fromOffset(16, 16), ZIndex = 8})
+        collapseArrow.Visible = not state.collapsed
+        collapse.Size = UDim2.fromOffset(state.collapsed and 24 or 44, 24)
     end
     drawCollapseIcon()
     function window:SetSidebarCollapsed(value)

@@ -134,7 +134,7 @@ return function(Library, ctx)
         ctx.round(track, 11)
         local trackEdge = ctx.stroke(track, "Border", control.CurrentValue and 1 or .88)
         -- Neon bloom around the track while the switch is on.
-        local neon = ctx.glow(track, 11, .7, nil, "Accent")
+        local neon = ctx.glow(track, 11, .7, nil, "Accent", true)
         local block = new("Frame", {
             Name = "ToggleThumb", AnchorPoint = Vector2.new(0, .5), Position = UDim2.new(0, 4, .5, 0),
             Size = UDim2.fromOffset(14, 14), BorderSizePixel = 0,
@@ -258,8 +258,8 @@ return function(Library, ctx)
         bind(thumb, "BackgroundColor3", "Primary")
         ctx.round(thumb, 8)
         -- Neon: the filled span always glows softly; it and the thumb flare while hovered or dragged.
-        local fillNeon = ctx.glow(fill, 2, .78, nil, "Accent")
-        local thumbNeon = ctx.glow(thumb, 8, .68, nil, "Accent")
+        local fillNeon = ctx.glow(fill, 2, .78, nil, "Accent", true)
+        local thumbNeon = ctx.glow(thumb, 8, .68, nil, "Accent", true)
         local dragging, hovered = false, false
         local function sizeThumb()
             local size = dragging or hovered

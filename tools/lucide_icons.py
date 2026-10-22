@@ -9,7 +9,7 @@ import urllib.request
 
 VERSION = "0.460.0"
 NAMES = ["house", "eye", "zap", "settings", "user", "map-pin", "swords", "info", "ellipsis",
-         "layout-grid", "search", "panel-left", "panel-left-close", "panel-left-open", "keyboard"]
+         "layout-grid", "search", "panel-left", "chevron-left", "keyboard"]
 TOLERANCE = 0.2  # in 24-unit icon space
 
 
