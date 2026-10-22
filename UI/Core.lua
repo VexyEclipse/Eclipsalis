@@ -4,13 +4,15 @@ local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
-local Library = {Flags = {}, Version = "1.6.1", Name = "Eclipse UI"}
+local Library = {Flags = {}, Version = "1.6.2", Name = "Eclipse UI"}
 local Tab = {}
 Tab.__index = Tab
 local WINDOW_WIDTH, WINDOW_HEIGHT = 660, 420
 local SIDEBAR_WIDTH, HEADER_HEIGHT = 148, 48
 local ctx = {Tab = Tab, UIS = UIS, fontMono = Enum.Font.Code, font = Enum.Font.Gotham, pad = 12}
-local state = {alive = true, connections = {}, threads = {}, bindings = setmetatable({}, {__mode = "k"}),
+-- Bindings hold strong keys: Roblox may collect an Instance's Lua proxy from a weak table while the
+-- Instance is still on screen, which silently dropped unreferenced parts (header, bracket glows) from theming.
+local state = {alive = true, connections = {}, threads = {}, bindings = {}, bindingCount = 0,
     tweens = setmetatable({}, {__mode = "k"}), tabs = {}, controls = {}, cleanups = {}, query = "", loading = false}
 local surfaceRoles = {"Sidebar", "Section", "Hover", "Input", "Secondary", "Border", "Shadow", "OnAccent"}
 local function palette(base, primary, accent, surfaces)
@@ -145,7 +147,17 @@ local function color(role)
     return type(role) == "function" and role(state.theme) or state.theme[role]
 end
 function ctx.bind(object, property, role, animate)
-    local bindings = state.bindings[object] or {}
+    local bindings = state.bindings[object]
+    if not bindings then
+        bindings = {}
+        state.bindingCount += 1
+        -- Periodically release bindings of destroyed objects (popups, dropdown rows, toasts).
+        if state.bindingCount % 256 == 0 then
+            for bound in pairs(state.bindings) do
+                if bound.Parent == nil then state.bindings[bound] = nil end
+            end
+        end
+    end
     bindings[property] = role
     state.bindings[object] = bindings
     if animate then ctx.tween(object, {[property] = color(role)}, .16) else object[property] = color(role) end
@@ -215,21 +227,6 @@ function ctx.vectorIcon(parent, name, properties)
         ctx.bind(segment, "BackgroundColor3", role); ctx.round(segment, 1)
         return segment
     end
-    local function path(points, thickness)
-        for i = 1, #points - 1 do
-            line(points[i][1], points[i][2], points[i + 1][1], points[i + 1][2], thickness)
-        end
-    end
-    -- Quadratic curve sampled into short segments.
-    local function curve(x1, y1, cx, cy, x2, y2, steps)
-        local points = {}
-        for i = 0, steps or 6 do
-            local t = i / (steps or 6)
-            local u = 1 - t
-            table.insert(points, {u * u * x1 + 2 * u * t * cx + t * t * x2, u * u * y1 + 2 * u * t * cy + t * t * y2})
-        end
-        path(points)
-    end
     local function ring(x, y, w, h)
         local frame = ctx.new("Frame", {Position = UDim2.fromScale(x, y), Size = UDim2.fromScale(w, h or w),
             BackgroundTransparency = 1, ZIndex = icon.ZIndex}, icon)
@@ -259,37 +256,37 @@ function ctx.vectorIcon(parent, name, properties)
     elseif name == "arrow" or name == "play" or name == "action" then
         line(.18,.5,.8,.5); line(.56,.25,.8,.5); line(.56,.75,.8,.5)
     elseif name == "check" then line(.2,.5,.42,.72); line(.42,.72,.82,.25)
-    elseif name == "search" then ring(.12,.12,.52); line(.6,.6,.86,.86)
-    elseif name == "sidebar" then box(.1,.16,.8,.68,3); line(.4,.2,.4,.8)
-    elseif name == "keyboard" then
-        box(.06,.22,.88,.56,3); line(.3,.64,.7,.64)
-        for i = 0, 3 do dot(.26 + i * .16, .42, .1) end
-    -- Sidebar tab icons, matched by keyword so "Auto Farms" or "Player ESP" resolve too.
-    elseif named("setting", "config") then
-        ring(.24,.24,.52); dot(.5,.5,.16)
-        for i = 0, 7 do
-            local angle = i * math.pi / 4 + math.pi / 8
-            line(.5 + math.cos(angle)*.3,.5 + math.sin(angle)*.3,.5 + math.cos(angle)*.42,.5 + math.sin(angle)*.42,2.4)
-        end
-    elseif named("home", "main", "dashboard") then
-        path({{.1,.5},{.5,.14},{.9,.5}}); path({{.22,.4},{.22,.86},{.78,.86},{.78,.4}})
-        path({{.42,.86},{.42,.64},{.58,.64},{.58,.86}})
-    elseif named("eye", "esp", "visual") then
-        curve(.06,.5,.5,.06,.94,.5); curve(.06,.5,.5,.94,.94,.5); ring(.36,.36,.28); dot(.5,.5,.1)
-    elseif named("farm", "auto", "crosshair") then
-        path({{.6,.06},{.22,.56},{.5,.56},{.4,.94},{.78,.42},{.5,.42},{.6,.06}})
-    elseif named("player", "local", "user", "character", "profile") then
-        ring(.32,.08,.36); curve(.12,.92,.5,.34,.88,.92)
-    elseif named("teleport", "map", "world", "location") then
-        ring(.3,.1,.4); dot(.5,.3,.12); path({{.33,.44},{.5,.9},{.67,.44}})
-    elseif named("combat", "fight", "pvp", "aim", "kill") then
-        line(.2,.8,.84,.16); line(.12,.62,.38,.88); line(.12,.88,.22,.78,2.2)
-    elseif named("info", "credit", "about", "help") then
-        ring(.08,.08,.84); dot(.5,.28,.12); line(.5,.44,.5,.74,1.8)
-    elseif named("misc", "other", "extra", "more") then
-        for i = 0, 2 do dot(.2 + i * .3, .5, .16) end
     else
-        for _, position in ipairs({{.1,.1},{.56,.1},{.1,.56},{.56,.56}}) do box(position[1], position[2], .34, .34, 2) end
+        -- Sidebar and header icons come from Lucide, matched by keyword so "Auto Farms" or "Player ESP" resolve too.
+        local glyph = "layout-grid"
+        if name == "search" then glyph = "search"
+        elseif name == "sidebar" then glyph = "panel-left"
+        elseif name == "keyboard" then glyph = "keyboard"
+        elseif ctx.lucide and ctx.lucide[name] then glyph = name
+        elseif named("setting", "config") then glyph = "settings"
+        elseif named("esp", "eye", "visual") then glyph = "eye"
+        elseif named("home", "main", "dashboard") then glyph = "house"
+        elseif named("farm", "auto") then glyph = "zap"
+        elseif named("player", "local", "user", "character", "profile") then glyph = "user"
+        elseif named("teleport", "map", "world", "location") then glyph = "map-pin"
+        elseif named("combat", "fight", "pvp", "aim", "kill") then glyph = "swords"
+        elseif named("info", "credit", "about", "help") then glyph = "info"
+        elseif named("misc", "other", "extra", "more") then glyph = "ellipsis" end
+        for _, shape in ipairs(ctx.lucide and ctx.lucide[glyph] or {}) do
+            if shape.circle then
+                local x, y, r = shape.circle[1], shape.circle[2], shape.circle[3]
+                if r < .06 then dot(x, y, r * 2 + .09) else ring(x - r, y - r, r * 2) end
+            elseif shape.rect then
+                local x, y, w, h, r = table.unpack(shape.rect)
+                box(x, y, w, h, math.max(1, r * 16))
+            else
+                for i = 1, #shape - 3, 2 do
+                    local x1, y1, x2, y2 = shape[i], shape[i + 1], shape[i + 2], shape[i + 3]
+                    -- Lucide draws dots as zero-length strokes with round caps.
+                    if math.abs(x2 - x1) + math.abs(y2 - y1) < .01 then dot(x1, y1, .09) else line(x1, y1, x2, y2) end
+                end
+            end
+        end
     end
     return icon
 end
@@ -874,8 +871,13 @@ function Library:CreateWindow(rawOptions)
         ctx.bind(wash, "BackgroundColor3", "Primary")
         ctx.new("UIGradient", {Rotation = 90, Transparency = NumberSequence.new(0, 1)}, wash)
     end
+    -- The top bar shares the sidebar's tinted surface, so it follows theme changes visibly
+    -- (Base is near-black in every dark preset). Rounded top corners match the window.
     local header = ctx.new("Frame", {Name = "Header", Size = UDim2.new(1, 0, 0, HEADER_HEIGHT), ZIndex = 7}, canvas)
-    ctx.bind(header, "BackgroundColor3", "Base")
+    ctx.bind(header, "BackgroundColor3", "Sidebar"); ctx.round(header, 10)
+    local headerBase = ctx.new("Frame", {Name = "SquareBottom", AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1),
+        Size = UDim2.new(1, 0, 0, 10), Active = false, ZIndex = 7}, header)
+    ctx.bind(headerBase, "BackgroundColor3", "Sidebar")
     local headerRule = ctx.new("Frame", {Name = "HeaderRule", AnchorPoint = Vector2.new(0, 1),
         Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0, 1), BackgroundTransparency = .94, ZIndex = 8}, header)
     ctx.bind(headerRule, "BackgroundColor3", "Border")
@@ -931,6 +933,9 @@ function Library:CreateWindow(rawOptions)
         Size = UDim2.new(0, sideWidth, 1, -HEADER_HEIGHT), ZIndex = 6}, canvas)
     ctx.bind(sidebar, "BackgroundColor3", "Sidebar")
     state.sidebar = sidebar
+    -- Square top edge so the sidebar meets the top bar without corner notches.
+    local sidebarJoin = ctx.new("Frame", {Name = "SquareTop", Size = UDim2.new(1, 0, 0, 10), Active = false, ZIndex = 6}, sidebar)
+    ctx.bind(sidebarJoin, "BackgroundColor3", "Sidebar")
     ctx.round(sidebar, 8)
     local nav = ctx.new("ScrollingFrame", {Name = "Tabs", Position = UDim2.fromOffset(state.collapsed and 4 or 8, 40),
         Size = UDim2.new(1, state.collapsed and -8 or -16, 1, -48), BackgroundTransparency = 1, ScrollBarThickness = 1,
@@ -1177,6 +1182,7 @@ function Library:Destroy()
     for _, control in ipairs(state.controls) do control.Destroyed = true end
     if state.screen then state.screen:Destroy() end
     table.clear(self.Flags)
+    table.clear(state.bindings)
 end
 Library.Unload = Library.Destroy
 return Library, ctx
