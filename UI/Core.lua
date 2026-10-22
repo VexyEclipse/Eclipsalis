@@ -4,7 +4,7 @@ local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
-local Library = {Flags = {}, Version = "1.4.2", Name = "Eclipse UI"}
+local Library = {Flags = {}, Version = "1.4.3", Name = "Eclipse UI"}
 local Tab = {}
 Tab.__index = Tab
 local WINDOW_WIDTH, WINDOW_HEIGHT = 660, 420
@@ -730,8 +730,18 @@ function Library:CreateWindow(rawOptions)
             Position = UDim2.fromOffset(0, y * 7), Active = false, ZIndex = 3}, mark)
         local vertical = ctx.new("Frame", {Size = UDim2.fromOffset(1, 8),
             Position = UDim2.fromOffset(x * 7, 0), Active = false, ZIndex = 3}, mark)
-        ctx.bind(horizontal, "BackgroundColor3", "Secondary")
-        ctx.bind(vertical, "BackgroundColor3", "Secondary")
+        for _, edge in ipairs({horizontal, vertical}) do
+            ctx.bind(edge, "BackgroundColor3", "Accent")
+            edge.ZIndex = 4
+            -- Static rectangular falloff preserves the sharp bracket silhouette.
+            for spread = 3, 1, -1 do
+                local glow = ctx.new("Frame", {Name = "BracketGlow", Active = false, ZIndex = 3,
+                    Position = UDim2.fromOffset(edge.Position.X.Offset - spread, edge.Position.Y.Offset - spread),
+                    Size = UDim2.fromOffset(edge.Size.X.Offset + spread * 2, edge.Size.Y.Offset + spread * 2),
+                    BackgroundTransparency = .88 + spread * .03}, mark)
+                ctx.bind(glow, "BackgroundColor3", "Accent")
+            end
+        end
     end
     local function syncChrome()
         for _, frame in ipairs({shadow, brackets}) do

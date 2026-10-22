@@ -128,3 +128,6 @@ Validation: Luau compilation of the generated library and gallery; 31 focused te
 ### 22 October input overflow follow-up
 
 v1.4.2 input overflow fix: input placeholders and unfocused values use end ellipsis instead of drawing outside the field. Focus removes truncation so the full value remains editable; blur restores ellipsis. Input/value containers clip their contents, and advanced text fields use the same truncation behavior. Stored values and callbacks are unchanged. Library/gallery compilation passed; actual Roblox placeholder rendering remains a live check.
+
+
+v1.4.3: corner brackets now use the shared Accent color (#3B82F6 by default), with a subtle static three-layer blue falloff behind their sharp 1px edges. Glow follows bracket positioning, hiding and theme changes; no animation worker was added. Library/gallery compile locally; glow appearance remains a live Roblox check.
