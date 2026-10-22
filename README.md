@@ -1,6 +1,6 @@
 # Eclipse UI
 
-A polished, compact Roblox interface for Eclipse. Version **1.6.4** uses near-black Absolute Dark surfaces, restrained blue active states, rounded switches and the original white flame logo. Built directly with Roblox GUI objects, with no external UI dependency.
+A polished, compact Roblox interface for Eclipse. Version **1.6.5** uses near-black Absolute Dark surfaces, restrained blue active states, rounded switches and the original white flame logo. Built directly with Roblox GUI objects, with no external UI dependency.
 
 ```lua
 local Eclipse = loadstring(game:HttpGet("https://raw.githubusercontent.com/VexyEclipse/Eclipsalis/main/EclipseUI.lua"))()
@@ -8,6 +8,9 @@ local Window = Eclipse:CreateWindow({
     Name = "Eclipse Hub",
     LoadingTitle = "ECLIPSE",
     LoadingSubtitle = "v1.4.1",
+    Subtitle = "v1.6.5",
+    Badge = "Premium",          -- title bar pill; see "Title bar pill" below
+    BadgeColor = "#A855F7",
     Theme = "Absolute Dark",
     ToggleUIKeybind = "K",
     ConfigurationSaving = {Enabled = false},
@@ -46,6 +49,35 @@ Controls are added to the latest section in a tab. `Section:CreateToggle(...)` a
 The ASCII renderer uses one shared RenderStepped connection, throttled to 18 updates per second, with bounded cell and ripple counts. The Matrix look is on by default: ambient glyphs fall behind the cards at about 0.70–0.82 transparency, and buttons carry a small glyph block. Pass `Matrix = false` to `CreateWindow` for a faint static wash and arrow buttons instead. The background stops while minimized, and its resources disconnect on unload.
 
 The owner's original white flame logo is preserved, as requested on 21 October. Its exact transparent PNG is embedded in the module and loaded with executor `writefile` plus `getcustomasset`/`getsynasset`; an E monogram is the fallback. No generated logo is used. Supply `LogoId` for your own published image instead. The original vector trace is [UI/Assets/eclipse-logo.svg](UI/Assets/eclipse-logo.svg).
+
+## Title bar pill
+
+The small pill next to the window title (for example **PREMIUM**) is set in the `CreateWindow` config. Its text is shown in capitals.
+
+| Option | Type | Default | Effect |
+| --- | --- | --- | --- |
+| `Badge` | string, `false`, or table | taken from `Subtitle` | Pill text. `false` or `""` hides the pill. A table may hold `Text`, `Color` and `TextColor`. |
+| `BadgeColor` | color | `"Accent"` | Pill color: a tinted background with text in the same color. |
+| `BadgeTextColor` | color | same as `BadgeColor` | Overrides only the text color. |
+
+A color is a `Color3`, a hex string (`"#FF4FD8"` or `"FF4FD8"`), or a theme role name: `"Accent"`, `"Primary"`, `"Secondary"`, `"Base"` and the other surface roles. Role colors follow theme changes; `Color3` and hex colors stay fixed.
+
+Without `Badge`, a `Subtitle` written as `"WORD / rest"` (an uppercase word, then `/`, `|` or `·`) becomes a pill reading WORD followed by the rest in muted text, so `Subtitle = "PREMIUM / v2026.10.22"` keeps working. When you set `Badge` yourself, put only the remaining text in `Subtitle`.
+
+```lua
+-- Text and color
+local Window = Eclipse:CreateWindow({Name = "Eclipse Hub", Subtitle = "v2026.10.22",
+    Badge = "VIP", BadgeColor = Color3.fromRGB(250, 204, 21)})
+
+-- Table form, with a separate text color
+Eclipse:CreateWindow({Name = "Eclipse Hub", Subtitle = "v2026.10.22",
+    Badge = {Text = "Beta", Color = "#22C55E", TextColor = "Primary"}})
+
+-- No pill
+Eclipse:CreateWindow({Name = "Eclipse Hub", Subtitle = "v2026.10.22", Badge = false})
+```
+
+Change it later with `Window:SetBadge(text, color, textColor)`. Pass `nil` to keep a value, `false` as the text to hide the pill, or one table: `Window:SetBadge({Text = "Lifetime", Color = "#F59E0B"})`.
 
 ## API contract
 
@@ -171,3 +203,5 @@ v1.6.3: seven new presets, each passing 4.5:1 contrast for primary and secondary
 Custom theme tables may set `Effect` to any of these names.
 
 v1.6.4: the sidebar collapse control uses Lucide `panel-left-close` / `panel-left-open`, so a chevron shows which way the sidebar will move. Switches glow with an accent neon bloom while on, buttons flash the same bloom when pressed, and sliders glow softly along the filled span, flaring with the thumb while hovered or dragged (`ctx.glow` now takes an optional color role). Preset names are spaced for display: Cyber Yellow, Amber Glow and Neon Cyan; `CyberYellow`, `AmberGlow` and `NeonCyan` still work.
+
+v1.6.5: the title bar pill is configurable from `CreateWindow`: `Badge` (text, `false`, or `{Text, Color, TextColor}`), `BadgeColor` and `BadgeTextColor`, plus `Window:SetBadge(...)` at runtime. See [Title bar pill](#title-bar-pill). Subtitles such as `"PREMIUM / v1.2"` still produce the pill automatically.

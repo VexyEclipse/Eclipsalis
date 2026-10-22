@@ -4,7 +4,7 @@ local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
-local Library = {Flags = {}, Version = "1.6.4", Name = "Eclipse UI"}
+local Library = {Flags = {}, Version = "1.6.5", Name = "Eclipse UI"}
 local Tab = {}
 Tab.__index = Tab
 local WINDOW_WIDTH, WINDOW_HEIGHT = 660, 420
@@ -906,25 +906,59 @@ function Library:CreateWindow(rawOptions)
     ctx.text(header, window.Name, {Position = UDim2.fromOffset(52, 7), Size = UDim2.new(1, -176, 0, 20),
         TextSize = 15, Font = Enum.Font.GothamBold, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 8})
     -- "PREMIUM / v1.2" subtitles render the tier as a pill and the remainder as muted text.
+    -- The pill takes `Badge` (text, false to hide, or {Text, Color, TextColor}), `BadgeColor` and
+    -- `BadgeTextColor`. Colors are a Color3, "#RRGGBB" hex or a theme role name such as "Accent".
     local subtitleText = tostring(options.Subtitle or "v" .. Library.Version)
+    local badgeOptions = type(options.Badge) == "table" and ctx.options(options.Badge) or {}
     local badgeText, restText = options.Badge, subtitleText
+    if type(badgeText) == "table" then badgeText = badgeOptions.Text or badgeOptions.Name end
     if badgeText == nil then
         local tier, rest = string.match(subtitleText, "^%s*(%u[%u%d]+)%s*[/|·]%s*(.-)%s*$")
         if tier then badgeText, restText = tier, rest end
+    end
+    local function colorRole(value, fallback)
+        if typeof(value) == "Color3" then return function() return value end end
+        if type(value) == "string" then
+            if state.theme[value] then return value end
+            local hex = string.match(value, "^#?(%x%x%x%x%x%x)$")
+            if hex then local parsed = Color3.fromHex(hex); return function() return parsed end end
+        end
+        return fallback
     end
     local subtitleRow = ctx.new("Frame", {Name = "Subtitle", BackgroundTransparency = 1, Position = UDim2.fromOffset(52, 27),
         Size = UDim2.new(1, -176, 0, 16), ClipsDescendants = true, ZIndex = 8}, header)
     ctx.new("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6),
         VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder}, subtitleRow)
-    if badgeText and tostring(badgeText) ~= "" then
-        local badge = ctx.new("Frame", {Name = "TierBadge", Size = UDim2.fromOffset(0, 15),
-            AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = .84, LayoutOrder = 1, ZIndex = 8}, subtitleRow)
-        ctx.bind(badge, "BackgroundColor3", "Accent"); ctx.round(badge, 8)
-        ctx.new("UIPadding", {PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6)}, badge)
-        local badgeLabel = ctx.text(badge, string.upper(tostring(badgeText)), {Size = UDim2.fromOffset(0, 15),
-            AutomaticSize = Enum.AutomaticSize.X, Font = Enum.Font.GothamBold, TextSize = 9, ZIndex = 9})
-        ctx.bind(badgeLabel, "TextColor3", "Accent")
+    local badge = ctx.new("Frame", {Name = "TierBadge", Size = UDim2.fromOffset(0, 15),
+        AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = .84, LayoutOrder = 1, ZIndex = 8}, subtitleRow)
+    ctx.round(badge, 8)
+    ctx.new("UIPadding", {PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6)}, badge)
+    local badgeLabel = ctx.text(badge, "", {Size = UDim2.fromOffset(0, 15),
+        AutomaticSize = Enum.AutomaticSize.X, Font = Enum.Font.GothamBold, TextSize = 9, ZIndex = 9})
+    local badgeColor, badgeTextColor = "Accent", nil
+    -- Text follows the pill color unless a separate text color was given.
+    local function paintBadge()
+        ctx.bind(badge, "BackgroundColor3", badgeColor)
+        ctx.bind(badgeLabel, "TextColor3", badgeTextColor or badgeColor)
     end
+    function window:SetBadge(text, color, textColor)
+        if type(text) == "table" then
+            local updated = ctx.options(text)
+            text, color, textColor = updated.Text or updated.Name, updated.Color, updated.TextColor
+        end
+        if text ~= nil then
+            local value = text ~= false and tostring(text) or ""
+            badgeLabel.Text = string.upper(value)
+            badge.Visible = value ~= ""
+        end
+        if color ~= nil then badgeColor = colorRole(color, badgeColor) end
+        if textColor ~= nil then badgeTextColor = colorRole(textColor, badgeTextColor) end
+        paintBadge()
+        return window
+    end
+    badge.Visible = false
+    window:SetBadge(badgeText or false, badgeOptions.Color or options.BadgeColor,
+        badgeOptions.TextColor or options.BadgeTextColor)
     local subtitle = ctx.text(subtitleRow, restText, {Size = UDim2.fromOffset(0, 16), AutomaticSize = Enum.AutomaticSize.X,
         Font = ctx.font, TextSize = 12, LayoutOrder = 2, ZIndex = 8})
     ctx.bind(subtitle, "TextColor3", "Secondary")
