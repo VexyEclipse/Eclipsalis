@@ -1,7 +1,7 @@
 -- Bounded procedural ASCII decoration. Installed before controls in the standalone build.
 return function(Library, ctx)
     local RunService = game:GetService("RunService")
-    local glyphs = {".", "+", ":", "|", "-", ".", "/"}
+    local glyphs = {"0", "1", "0", "1", ".", ":", "|"}
     local handles, slices = {}, {}
     local connection, accumulated, disposed = nil, 0, false
     local interval, rippleLifetime = 1 / 18, 1.2
@@ -65,6 +65,10 @@ return function(Library, ctx)
                 if math.sin(now * 8 + cell.Column * 0.63 + cell.Row * 0.29) > 0.985 then energy += 0.22 end
             elseif isWatermark then
                 energy = math.max(0, math.sin(now * 1.3 - cell.Column * 0.42)) * 0.13
+            else
+                local travel = (elapsed * (.12 + (cell.Column % 5) * .018) + cell.Column * .371) % 1
+                local trail = (travel - cell.Y) % 1
+                energy = math.max(0, 1 - trail / .38) * .75
             end
             for _, ripple in ipairs(ripples) do
                 local age = now - ripple.Time
@@ -77,7 +81,7 @@ return function(Library, ctx)
             local phase = math.floor(now * (energy > 0.2 and 13 or 2.4)
                 + cell.Column * 0.71 + cell.Row * 1.31 + wave * 1.5)
             local glyph = present and glyphs[phase % #glyphs + 1] or ""
-            local transparency = quantize(math.clamp(0.76 + wave * 0.055 - energy * 0.38, 0.32, 0.84))
+            local transparency = quantize(math.clamp((handle.Mode == "button" and .87 or .79) + wave * .025 - energy * .48, .36, .9))
             assign(cell.Label, "Text", glyph)
             assign(cell.Label, "TextTransparency", transparency)
             assign(cell.Label, "TextStrokeTransparency", quantize(1 - energy * 0.25))
@@ -114,7 +118,7 @@ return function(Library, ctx)
         assert(not disposed and ctx.alive(), "Cannot create decoration after Eclipse UI is destroyed.")
         local options = ctx.options(rawOptions)
         local mode = string.lower(tostring(options.Mode or "ambient"))
-        if mode ~= "boot" and mode ~= "watermark" then mode = "ambient" end
+        if mode ~= "boot" and mode ~= "watermark" and mode ~= "button" then mode = "ambient" end
         local glyphSize = math.clamp(number(options.GlyphSize, mode == "watermark" and 9 or 12), 8, 16)
         local width = parent.AbsoluteSize.X > 0 and parent.AbsoluteSize.X or (mode == "boot" and 300 or 520)
         local height = parent.AbsoluteSize.Y > 0 and parent.AbsoluteSize.Y or (mode == "boot" and 240 or 262)

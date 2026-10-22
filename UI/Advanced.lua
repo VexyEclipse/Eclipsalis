@@ -92,9 +92,11 @@ return function(Library, ctx)
         control.Type = "Dropdown"
         control.Values = cleanOptions(options.Options)
         control.MultipleOptions = options.MultipleOptions == true
-        local button, badgeGlow, setBadgeActive = trigger(control, 64)
-        button.TextXAlignment = Enum.TextXAlignment.Left
-        ctx.new("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 23)}, button)
+        local button, badgeGlow, setBadgeActive = trigger(control, 88)
+        -- Separate siblings: text truncates before the arrow's reserved lane.
+        local selectionLabel = ctx.text(button, "", {Name = "SelectedValue", Position = UDim2.fromOffset(8, 0),
+            Size = UDim2.new(1, -36, 1, 0), TextSize = 13, TextTruncate = Enum.TextTruncate.AtEnd,
+            TextWrapped = false, ZIndex = button.ZIndex + 1})
         local chevron = ctx.vectorIcon(button, "chevron", {
             AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.fromOffset(16, 16),
         })
@@ -133,7 +135,7 @@ return function(Library, ctx)
             local count = #control.CurrentOption
             local summary = count == 0 and tostring(options.Placeholder or "Select") or table.concat(control.CurrentOption, ", ")
             if count > 1 then summary = tostring(count) .. " selected" end
-            button.Text = summary
+            selectionLabel.Text = summary
             for name, entry in pairs(rows) do
                 entry.Marker.BackgroundTransparency = selected[name] and 0 or 1
                 entry.Button.BackgroundTransparency = selected[name] and 0 or 1

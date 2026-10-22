@@ -77,8 +77,15 @@ return function(Library, ctx)
         options = ctx.options(options)
         local control, row, label = ctx.row(self, options, 34)
         control.Type = "Button"
-        compactLabel(label, 48)
-        label.Size = UDim2.new(1, -24, 1, 0)
+        control.SurfaceRole = "Input"
+        bind(row, "BackgroundColor3", "Input")
+        compactLabel(label, 56)
+        local matrix = new("Frame", {Name = "ButtonMatrix", BackgroundTransparency = 1,
+            AnchorPoint = Vector2.new(1, .5), Position = UDim2.new(1, -12, .5, 0),
+            Size = UDim2.fromOffset(24, 24), Active = false, ZIndex = label.ZIndex}, row)
+        local decoration = ctx.createAtmosphere(matrix, {Mode = "button", Columns = 3, Rows = 2,
+            GlyphSize = 8, ZIndex = label.ZIndex})
+        ctx.connect(row.Destroying, function() decoration:Destroy() end)
         bind(label, "TextColor3", "Primary")
         if control.Stroke then control.Stroke.Transparency = 1 end
         ctx.connect(row.Activated, function()

@@ -4,7 +4,7 @@ local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
-local Library = {Flags = {}, Version = "1.4.0", Name = "Eclipse UI"}
+local Library = {Flags = {}, Version = "1.4.1", Name = "Eclipse UI"}
 local Tab = {}
 Tab.__index = Tab
 local WINDOW_WIDTH, WINDOW_HEIGHT = 660, 420
@@ -506,7 +506,7 @@ function ctx.row(tab, rawOptions, height)
     end
     local function hover(on)
         if control.Disabled then return end
-        ctx.bind(frame, "BackgroundColor3", on and "Hover" or "Section", true)
+        ctx.bind(frame, "BackgroundColor3", on and "Hover" or control.SurfaceRole or "Section", true)
     end
     ctx.connect(frame.MouseEnter, function() hover(true) end)
     ctx.connect(frame.MouseLeave, function() hover(false) end)
@@ -712,17 +712,35 @@ function Library:CreateWindow(rawOptions)
     ctx.bind(root, "BackgroundColor3", "Base"); ctx.round(root, 10)
     local shadow = ctx.new("Frame", {Name = "WindowShadow", BackgroundTransparency = 1,
         Size = root.Size, Position = root.Position, Active = false, ZIndex = 1}, stage)
-    for index = 1, 3 do
-        local spread = index * 4
-        local layer = ctx.new("Frame", {Name = "ShadowLayer", Position = UDim2.fromOffset(-spread, 4 - spread),
-            Size = UDim2.new(1, spread * 2, 1, spread * 2), BackgroundTransparency = .82 + index * .04,
+    -- Fine falloff layers form a downward shadow without outlined rings.
+    for spread = 12, 0, -1 do
+        local layer = ctx.new("Frame", {Name = "ShadowFalloff", Position = UDim2.fromOffset(-spread, 6 - spread),
+            Size = UDim2.new(1, spread * 2, 1, spread * 2), BackgroundTransparency = .975 - (12 - spread) * .0015,
             Active = false, ZIndex = 1}, shadow)
         ctx.bind(layer, "BackgroundColor3", "Input"); ctx.round(layer, 10 + spread)
     end
-    local function syncShadow() shadow.Position = root.Position; shadow.Size = root.Size; shadow.Visible = root.Visible end
-    ctx.connect(root:GetPropertyChangedSignal("Position"), syncShadow)
-    ctx.connect(root:GetPropertyChangedSignal("Size"), syncShadow)
-    ctx.connect(root:GetPropertyChangedSignal("Visible"), syncShadow)
+    local brackets = ctx.new("Frame", {Name = "CornerBrackets", BackgroundTransparency = 1,
+        Size = root.Size, Position = root.Position, Active = false, ZIndex = 3}, stage)
+    for _, corner in ipairs({{0, 0}, {1, 0}, {0, 1}, {1, 1}}) do
+        local x, y = corner[1], corner[2]
+        local mark = ctx.new("Frame", {Name = "Bracket", BackgroundTransparency = 1, Active = false,
+            AnchorPoint = Vector2.new(x, y), Position = UDim2.new(x, x == 0 and -3 or 3, y, y == 0 and -3 or 3),
+            Size = UDim2.fromOffset(8, 8), ZIndex = 3}, brackets)
+        local horizontal = ctx.new("Frame", {Size = UDim2.fromOffset(8, 1),
+            Position = UDim2.fromOffset(0, y * 7), Active = false, ZIndex = 3}, mark)
+        local vertical = ctx.new("Frame", {Size = UDim2.fromOffset(1, 8),
+            Position = UDim2.fromOffset(x * 7, 0), Active = false, ZIndex = 3}, mark)
+        ctx.bind(horizontal, "BackgroundColor3", "Secondary")
+        ctx.bind(vertical, "BackgroundColor3", "Secondary")
+    end
+    local function syncChrome()
+        for _, frame in ipairs({shadow, brackets}) do
+            frame.Position = root.Position; frame.Size = root.Size; frame.Visible = root.Visible
+        end
+    end
+    ctx.connect(root:GetPropertyChangedSignal("Position"), syncChrome)
+    ctx.connect(root:GetPropertyChangedSignal("Size"), syncChrome)
+    ctx.connect(root:GetPropertyChangedSignal("Visible"), syncChrome)
     local window = {Flags = self.Flags, Tabs = state.tabs, Name = options.Name or "Eclipse", Frame = root}
     state.window = window; self.Window = window
     window.ModifyTheme = function(first, second) return self:ModifyTheme(first == window and second or first) end
@@ -775,8 +793,8 @@ function Library:CreateWindow(rawOptions)
     ctx.bind(sidebar, "BackgroundColor3", "Sidebar")
     state.sidebar = sidebar
     ctx.round(sidebar, 8)
-    local nav = ctx.new("ScrollingFrame", {Name = "Tabs", Position = UDim2.fromOffset(8, 40),
-        Size = UDim2.new(1, -16, 1, -48), BackgroundTransparency = 1, ScrollBarThickness = 1,
+    local nav = ctx.new("ScrollingFrame", {Name = "Tabs", Position = UDim2.fromOffset(state.collapsed and 4 or 8, 40),
+        Size = UDim2.new(1, state.collapsed and -8 or -16, 1, -48), BackgroundTransparency = 1, ScrollBarThickness = 1,
         AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ScrollingDirection = Enum.ScrollingDirection.Y,
         ZIndex = 7}, sidebar)
     ctx.bind(nav, "ScrollBarImageColor3", "Accent")
@@ -790,8 +808,9 @@ function Library:CreateWindow(rawOptions)
     local function viewport() return ctx.unscale(physicalViewport()) end
     local function constrainWindow(position)
         local size = viewport()
-        return Vector2.new(math.clamp(position.X, 8, math.max(8, size.X - state.width - 8)),
-            math.clamp(position.Y, 8, math.max(8, size.Y - state.height - 8)))
+        -- Leave a reachable title strip while permitting most of the body off-screen.
+        return Vector2.new(math.clamp(position.X, 64 - (state.width - 120), math.max(0, size.X - 64)),
+            math.clamp(position.Y, -24, math.max(0, size.Y - 24)))
     end
     local function place(reset)
         local size = viewport()
@@ -801,7 +820,7 @@ function Library:CreateWindow(rawOptions)
         root.Position = UDim2.fromOffset(position.X, position.Y)
     end
     local floating = ctx.new("TextButton", {Name = "Reopen", Text = "",
-        Font = Enum.Font.GothamBold, TextSize = 10, AutoButtonColor = false, Position = UDim2.new(0, 10, .5, 0),
+        Font = Enum.Font.GothamBold, TextSize = 10, AutoButtonColor = false, Position = UDim2.new(.5, -18, 0, 12),
         Size = UDim2.fromOffset(36, 36), ZIndex = 19, Visible = UIS.TouchEnabled}, stage)
     ctx.bind(floating, "BackgroundColor3", "Input")
     ctx.round(floating, 10); ctx.softGlow(floating, 10)
@@ -824,7 +843,8 @@ function Library:CreateWindow(rawOptions)
         if stopWindowDrag then stopWindowDrag() end
         state.minimized = value == true
         closePopup(); hideTooltip(); root.Visible = not state.minimized
-        if not state.minimized then place(true) end
+        if not state.minimized then place(true)
+        else floating.Position = UDim2.new(.5, -18, 0, 12); floatingStart = nil; floatingMoved = false end
         visualRunning(not state.minimized and canvas.Visible)
         if state.bootAtmosphere then state.bootAtmosphere:SetRunning(not state.minimized and not state.bootDone) end
         floating.Visible = UIS.TouchEnabled or state.minimized
@@ -843,15 +863,22 @@ function Library:CreateWindow(rawOptions)
         if not processed and not UIS:GetFocusedTextBox() and not ctx._keybindCapture and (ctx._modalOpen or 0) == 0
             and input.KeyCode.Name == toggleKey then window:Toggle() end
     end)
-    local collapse = ctx.new("TextButton", {Name = "Collapse", Text = "", Position = UDim2.fromOffset(12, 8),
+    local collapse = ctx.new("TextButton", {Name = "Collapse", Text = "", Position = UDim2.fromOffset(state.collapsed and 10 or 16, 8),
         Size = UDim2.fromOffset(24, 24), BackgroundTransparency = 1, AutoButtonColor = false, ZIndex = 7}, sidebar)
-    ctx.vectorIcon(collapse, "sidebar", {Position = UDim2.fromOffset(5, 5), Size = UDim2.fromOffset(16, 16), ZIndex = 8})
+    ctx.vectorIcon(collapse, "sidebar", {Position = UDim2.fromOffset(4, 4), Size = UDim2.fromOffset(16, 16), ZIndex = 8})
     function window:SetSidebarCollapsed(value)
         state.collapsed = value == true; closePopup()
         local width = state.collapsed and 44 or SIDEBAR_WIDTH
         ctx.tween(sidebar, {Size = UDim2.new(0, width, 1, -HEADER_HEIGHT)}, .18)
         ctx.tween(content, {Position = UDim2.fromOffset(width, HEADER_HEIGHT), Size = UDim2.new(1, -width, 1, -HEADER_HEIGHT)}, .18)
-        for _, tab in ipairs(state.tabs) do tab.NavLabel.Visible = not state.collapsed; queueReflow(tab) end
+        nav.Position = UDim2.fromOffset(state.collapsed and 4 or 8, 40)
+        nav.Size = UDim2.new(1, state.collapsed and -8 or -16, 1, -48)
+        collapse.Position = UDim2.fromOffset(state.collapsed and 10 or 16, 8)
+        for _, tab in ipairs(state.tabs) do
+            tab.NavLabel.Visible = not state.collapsed
+            tab.Icon.Position = state.collapsed and UDim2.new(.5, -8, 0, 8) or UDim2.fromOffset(12, 8)
+            queueReflow(tab)
+        end
     end
     ctx.connect(collapse.Activated, function() window:SetSidebarCollapsed(not state.collapsed) end)
     function window:SelectTab(tabOrName)
@@ -916,6 +943,7 @@ function Library:CreateWindow(rawOptions)
             ctx.bind(iconImage, "ImageColor3", "Primary"); tab.Icon = iconImage
         else tab.Icon = ctx.vectorIcon(button, type(tabOptions.Icon) == "string" and tabOptions.Icon or name,
             {Position = UDim2.fromOffset(12, 8), Size = UDim2.fromOffset(16, 16), ZIndex = 8}) end
+        tab.Icon.Position = state.collapsed and UDim2.new(.5, -8, 0, 8) or UDim2.fromOffset(12, 8)
         tab.NavLabel = ctx.text(button, name, {Position = UDim2.fromOffset(40, 0), Size = UDim2.new(1, -48, 1, 0),
             Font = ctx.font, TextSize = 14, TextTruncate = Enum.TextTruncate.AtEnd, Visible = not state.collapsed, ZIndex = 8})
         tab.Indicator = ctx.new("Frame", {Name = "ActiveIndicator", Size = UDim2.fromOffset(2, 16),
@@ -943,8 +971,10 @@ function Library:CreateWindow(rawOptions)
         for _, tab in ipairs(state.tabs) do queueReflow(tab) end
         place(false)
         local size = viewport()
-        floating.Position = UDim2.fromOffset(math.clamp(floating.Position.X.Offset, 0, math.max(0, size.X - 36)),
+        if state.minimized then floating.Position = UDim2.new(.5, -18, 0, 12) else
+        floating.Position = UDim2.fromOffset(math.clamp(floating.Position.X.Scale * size.X + floating.Position.X.Offset, 0, math.max(0, size.X - 36)),
             math.clamp(floating.Position.Y.Scale * size.Y + floating.Position.Y.Offset, 0, math.max(0, size.Y - 36)))
+        end
     end
     ctx.connect(screen:GetPropertyChangedSignal("AbsoluteSize"), resizeInterface)
     place(true)
